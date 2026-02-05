@@ -1,0 +1,116 @@
+// Some of this code was copied from Karl Yerkes' starter code at 
+// https://github.com/kybr/Badass-Toy/blob/main/PluginProcessor.cpp
+
+#pragma once
+#include <cmath>
+#include <vector>
+#include <numbers>
+
+class Phasor {
+    float frequency_;
+    const float sample_rate_;
+    float offset_;
+    float phase_;
+
+    public:
+    Phasor(float hertz = 0.0f, float sample_rate = 44100.0f, float offset = 0.0f)
+        : frequency_(hertz / sample_rate), sample_rate_(sample_rate), offset_(offset), phase_(0) {}
+
+    Phasor& operator=(Phasor& other) {
+        this->frequency_ = other.frequency_;
+        this->offset_ = other.offset_;
+        this->phase_ = other.phase_;
+        return(*this);
+    }
+
+    float operator()() 
+    {
+        return process();
+    }
+
+    void frequency(float hertz) 
+    {
+        frequency_ = hertz / sample_rate_;
+    }
+
+    float process() {
+        if (phase_ >= 1.0f) {
+            phase_ -= 1.0f;
+        }
+        float output = phase_ + offset_;
+        if (output >= 1.0f) {
+            output -= 1.0f;
+        }
+
+        phase_ += frequency_; 
+        return output;
+    }
+
+    void incFrequency(float changeHz)
+    {
+        frequency_ += changeHz / sample_rate_;
+    }
+};
+
+inline float sin7(float x) {
+    // 7 multiplies + 7 addition/subtraction
+    // 14 operations
+    double result = x * (x * (x * (x * (x * (x * (66.5723768716453 * x - 233.003319050759) + 275.754490892928) - 106.877929605423) + 0.156842000875713) - 9.85899292126983) + 7.25653181200263) - (8.88178419700125e-16);
+    return((float)(result));
+}
+
+
+inline float scaleBeta(float omega)
+{
+    float x = 0.5f - omega;
+    return 13.0f * x * x * x * x;
+}
+
+inline float phaseWrap(float phase) {
+    return(phase - std::floor(phase));
+}
+
+class ArrayFloat : public std::vector<float> {
+    public:
+    float lookup(float index) { 
+        size_t to_the_left = (size_t)index;
+        size_t to_the_right = (to_the_left == (size() - 1)) ? 0 : to_the_left + 1;
+        float t = index - (float)to_the_left;
+        return operator[](to_the_left) * (1 - t) + t * operator[](to_the_right);
+    }
+    float phasor(float t) { 
+        return lookup(float(size()) * t);
+    }
+};
+
+class DelayLine : public ArrayFloat {
+    size_t index = 0;
+    public:
+
+    void write(float value) {
+        operator[](index) = value;
+        index = (index + 1) % size();
+    }
+
+    float read(float samples_ago) {
+        float readIndex = (float)index - samples_ago;
+        if (readIndex < 0) {
+            readIndex += (float)size();
+        }
+        return lookup(readIndex);
+    }
+};
+
+inline float sint(float t) {
+    struct TableSine : ArrayFloat {
+        TableSine() {
+        resize(4096);
+        for (size_t i = 0; i < size(); ++i) {
+            at(i) = static_cast<float>(sin((2.0 * std::numbers::pi * i) / static_cast<double>(size())));
+            //printf("%f\n", at(i));
+        }
+        }
+    };
+    static TableSine table;
+    return table.phasor(t);
+}
