@@ -76,7 +76,6 @@ target_sources(plugin
     PRIVATE
         BaaaEditor.cpp
         BaaaProcessor.cpp
-        DSP/quasi.cpp
         DSP/shifter.cpp)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer

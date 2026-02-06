@@ -15,15 +15,19 @@ public:
 
     juce::Slider freqSlider;
     juce::Slider gainSlider;
-    juce::Slider filterSlider;
+    juce::Slider upDupeSlider;
+    juce::Slider downDupeSlider;
+
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> freqAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> upDupeAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> downDupeAttachment;
 
     juce::Label freqLabel;
     juce::Label gainLabel;
-    juce::Label filterLabel;
+    juce::Label upDupeLabel;
+    juce::Label downDupeLabel;
 
 
 

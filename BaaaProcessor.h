@@ -2,7 +2,6 @@
 
 #include "DSP/utility.h"
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "DSP/quasi.h"
 #include "DSP/shifter.h"
 //==============================================================================
 class BaaaPluginAudioProcessor final : public juce::AudioProcessor

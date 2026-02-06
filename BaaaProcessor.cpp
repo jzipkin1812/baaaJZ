@@ -25,20 +25,18 @@ BaaaPluginAudioProcessor::createParameterLayout()
         -20.0f
     ));
 
-    // Filter (scalar)
+    // Superpositions
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        "filter",
-        "Filter",
-        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f),
+        "upCount",
+        "Superpositions Up",
+        juce::NormalisableRange<float>(0.0f, 10.0f, 1.0f),
         0.5f
     ));
-
-    // Saw, Square, or Impulse?
-    params.push_back(std::make_unique<juce::AudioParameterChoice>(
-        "waveform",
-        "Waveform",
-        juce::StringArray { "Saw", "Pulse", "Square" },
-        0 // default = Saw
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "downCount",
+        "Superpositions Down",
+        juce::NormalisableRange<float>(0.0f, 10.0f, 1.0f),
+        0.5f
     ));
 
     return { params.begin(), params.end() };
