@@ -5,7 +5,7 @@
 
 // INPUT HANDLING
 juce::AudioProcessorValueTreeState::ParameterLayout
-AudioPluginAudioProcessor::createParameterLayout()
+BaaaPluginAudioProcessor::createParameterLayout()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
@@ -46,7 +46,7 @@ AudioPluginAudioProcessor::createParameterLayout()
 
 
 //==============================================================================
-AudioPluginAudioProcessor::AudioPluginAudioProcessor()
+BaaaPluginAudioProcessor::BaaaPluginAudioProcessor()
      : AudioProcessor (BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
                       #if ! JucePlugin_IsSynth
@@ -55,25 +55,23 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        ),
-                       apvts(*this, nullptr, "PARAMETERS", createParameterLayout()),
-                       quasiWaveform(44100.0f, 0.5f, 440.0)
-
+                       apvts(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
     currentNote = -1;
     velocity = 0.0;
 }
 
-AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
+BaaaPluginAudioProcessor::~BaaaPluginAudioProcessor()
 {
 }
 
 //==============================================================================
-const juce::String AudioPluginAudioProcessor::getName() const
+const juce::String BaaaPluginAudioProcessor::getName() const
 {
     return JucePlugin_Name;
 }
 
-bool AudioPluginAudioProcessor::acceptsMidi() const
+bool BaaaPluginAudioProcessor::acceptsMidi() const
 {
    #if JucePlugin_WantsMidiInput
     return true;
@@ -82,7 +80,7 @@ bool AudioPluginAudioProcessor::acceptsMidi() const
    #endif
 }
 
-bool AudioPluginAudioProcessor::producesMidi() const
+bool BaaaPluginAudioProcessor::producesMidi() const
 {
    #if JucePlugin_ProducesMidiOutput
     return true;
@@ -91,7 +89,7 @@ bool AudioPluginAudioProcessor::producesMidi() const
    #endif
 }
 
-bool AudioPluginAudioProcessor::isMidiEffect() const
+bool BaaaPluginAudioProcessor::isMidiEffect() const
 {
    #if JucePlugin_IsMidiEffect
     return true;
@@ -100,57 +98,58 @@ bool AudioPluginAudioProcessor::isMidiEffect() const
    #endif
 }
 
-double AudioPluginAudioProcessor::getTailLengthSeconds() const
+double BaaaPluginAudioProcessor::getTailLengthSeconds() const
 {
     return 0.0;
 }
 
-int AudioPluginAudioProcessor::getNumPrograms()
+int BaaaPluginAudioProcessor::getNumPrograms()
 {
     return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
                 // so this should be at least 1, even if you're not really implementing programs.
 }
 
-int AudioPluginAudioProcessor::getCurrentProgram()
+int BaaaPluginAudioProcessor::getCurrentProgram()
 {
     return 0;
 }
 
-void AudioPluginAudioProcessor::setCurrentProgram (int index)
+void BaaaPluginAudioProcessor::setCurrentProgram (int index)
 {
     juce::ignoreUnused (index);
 }
 
-const juce::String AudioPluginAudioProcessor::getProgramName (int index)
+const juce::String BaaaPluginAudioProcessor::getProgramName (int index)
 {
     juce::ignoreUnused (index);
     return {};
 }
 
-void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void BaaaPluginAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
     juce::ignoreUnused (index, newName);
 }
 
 //==============================================================================
-void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void BaaaPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    juce::ignoreUnused (sampleRate, samplesPerBlock);
+    juce::ignoreUnused (samplesPerBlock);
     // prevOutput = 0.0f;
     // prevOutput2 = 0.0f;
     // FREQUENCY_HZ = 440.0f;
     // phasor = Phasor(440.0f);
+    shifter.prepare(sampleRate);
 }
 
-void AudioPluginAudioProcessor::releaseResources()
+void BaaaPluginAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
 }
 
-bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool BaaaPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
   #if JucePlugin_IsMidiEffect
     juce::ignoreUnused (layouts);
@@ -174,35 +173,10 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
   #endif
 }
 
-void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
+void BaaaPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
-    // Handle MIDI input; determine whether we're playing and what note
-    for (const auto metadata : midiMessages)
-    { 
-        const auto msg = metadata.getMessage();
 
-        if (msg.isNoteOn())
-        {
-            currentNote = msg.getNoteNumber();
-            quasiWaveform.setFrequency((float)(msg.getMidiNoteInHertz(currentNote)));
-            velocity = msg.getVelocity();
-
-            quasiWaveform.resetOscillator();
-        }
-        else if (msg.isNoteOff())
-        {
-            if (msg.getNoteNumber() == currentNote)
-                currentNote = -1;
-        }
-    }
-
-    // No midi note = no playback
-    if (currentNote < 0)
-    {
-        buffer.clear();
-        return;
-    }
     
     // Declare channel data
     juce::ScopedNoDenormals noDenormals;
@@ -221,39 +195,32 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     float gainDb = apvts.getRawParameterValue("outputGain")->load();
     float gainLinear = juce::Decibels::decibelsToGain(gainDb);
     float velocityLinear = ((float)(velocity) / 127.0f);
-    // Set scalar for harmonics
-    float betaSliderScalar = apvts.getRawParameterValue("filter")->load();
-    quasiWaveform.setVirtualFilter(betaSliderScalar);
-    // Which waveform?
-    int waveform = (int)(apvts.getRawParameterValue("waveform")->load());
-    quasiWaveform.setWaveform(waveform);
 
     // Actual signal processing
-    for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+    auto* data = buffer.getWritePointer (0);
+    for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
-        float outputSample = quasiWaveform();
-        for (int channel = 0; channel < totalNumOutputChannels; ++channel)
-            buffer.getWritePointer(channel)[sample] = (outputSample * gainLinear * velocityLinear);
-
+        float shifted = shifter.processSample (data[i]);
+        data[i] = data[i] + 0.7f * shifted;
     }
 }
 
 //==============================================================================
-bool AudioPluginAudioProcessor::hasEditor() const
+bool BaaaPluginAudioProcessor::hasEditor() const
 {
     return true; // (change this to false if you choose to not supply an editor)
 }
 
-juce::AudioProcessorEditor* AudioPluginAudioProcessor::createEditor()
+juce::AudioProcessorEditor* BaaaPluginAudioProcessor::createEditor()
 {
-    return new AudioPluginAudioProcessorEditor (*this);
+    return new BaaaPluginAudioProcessorEditor (*this);
 }
 
 //==============================================================================
 // this boiler plate XML saver was copied from
 // https://github.com/kybr/Badass-Toy/blob/main/PluginProcessor.cpp
 // thanks
-void AudioPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void BaaaPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
@@ -263,7 +230,7 @@ void AudioPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData
     copyXmlToBinary(*xml, destData);
 }
 
-void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void BaaaPluginAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
@@ -276,5 +243,5 @@ void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeI
 // This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new AudioPluginAudioProcessor();
+    return new BaaaPluginAudioProcessor();
 }

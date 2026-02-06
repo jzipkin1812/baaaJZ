@@ -1,51 +1,39 @@
 #include "BaaaProcessor.h"
 #include "BaaaEditor.h"
 #include <iostream>
+#include <vector>
 
-// To help me learn the Editor and UI APIs I used ChatGPT. 
-// It generated some boiler plate code and I modified/wrote my own.
-// Here are the prompts I used:
-// 1. Now let's add sliders to the plugin to change the output DB and frequency
-// 2. What is this avpts thing you keep mentioning? my compiler isn't recognizing it
-// 3. Let's add a button that gives me a boolean variable I can then use to switch between saw and impulse mode
-// 4. Instead of pulse and saw, let's do pulse, saw, and square. I already have the audio processing done, what's an easy way to do the UI
+static void stylizeSlider(juce::Slider& s) {
+    s.setSliderStyle(juce::Slider::LinearVertical);
+    s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    s.setColour(juce::Slider::textBoxTextColourId, juce::Colours::darkslategrey);
+    return;
+}
+
+static void stylizeLabel(juce::Label &l, juce::Component* c, juce::String str) {
+    l.setText(str, juce::dontSendNotification);
+    l.setJustificationType(juce::Justification::centred);
+    l.attachToComponent(c, false);
+    l.setColour(juce::Label::textColourId, juce::Colours::darkslategrey);
+}
 
 //==============================================================================
-AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
+BaaaPluginAudioProcessorEditor::BaaaPluginAudioProcessorEditor (BaaaPluginAudioProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p)
 {
     juce::ignoreUnused (processorRef);
-    // Frequency slider
-    freqSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    freqSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
-    freqSlider.setSkewFactorFromMidPoint(1000.0f);
+    stylizeSlider(freqSlider);
+    stylizeSlider(gainSlider);
+    stylizeSlider(filterSlider);
+
     addAndMakeVisible(freqSlider);
-
-    // Gain slider
-    gainSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
     addAndMakeVisible(gainSlider);
-
-    // Virtual filter slider
-    filterSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    filterSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
     addAndMakeVisible(filterSlider);
 
     // Slider labels
-    freqLabel.setText("Frequency (Hz)", juce::dontSendNotification);
-    freqLabel.setJustificationType(juce::Justification::centred);
-    freqLabel.attachToComponent(&freqSlider, false);
-    addAndMakeVisible(freqLabel);
-
-    gainLabel.setText("Output (dB)", juce::dontSendNotification);
-    gainLabel.setJustificationType(juce::Justification::centred);
-    gainLabel.attachToComponent(&gainSlider, false);
-    addAndMakeVisible(gainLabel);
-
-    filterLabel.setText("Filter", juce::dontSendNotification);
-    filterLabel.setJustificationType(juce::Justification::centred);
-    filterLabel.attachToComponent(&filterSlider, false);
-    addAndMakeVisible(filterLabel);
+    stylizeLabel(freqLabel, &freqSlider, "Frequency (Hz)");
+    stylizeLabel(gainLabel, &gainSlider, "Output (dB)");
+    stylizeLabel(filterLabel, &filterSlider, "Filter");
 
 
     // Attachments for sliders
@@ -57,33 +45,25 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     filterAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         p.apvts, "filter", filterSlider);
-
-    // Waveform selector
-    waveformBox.addItem("Saw", 1);
-    waveformBox.addItem("Impulse (Squared Output)", 2);
-    waveformBox.addItem("Square (Saw Subtraction)", 3);
-    addAndMakeVisible(waveformBox);
-    waveformAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
-        (p.apvts, "waveform", waveformBox);
     
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
+    setResizable(true, false);
+    setResizeLimits(500, 200, 5000, 2000);
     setSize (600, 300);
-
-
 }
 
-AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
+BaaaPluginAudioProcessorEditor::~BaaaPluginAudioProcessorEditor()
 {
 }
 
 //==============================================================================
-void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
+void BaaaPluginAudioProcessorEditor::paint (juce::Graphics& g)
 {
     auto gradient = juce::ColourGradient(
-        juce::Colour::fromRGB(12, 12, 56),
+        juce::Colour::fromRGB(127, 255, 0),
         juce::Point<float>(0.0, 0.0),
-        juce::Colour::fromRGB(100, 0, 160),
+        juce::Colour::fromRGB(176, 224, 230),
         juce::Point<float>((float)getWidth(), (float)getHeight()),
         false
     );
@@ -94,17 +74,17 @@ void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
     tg.fillAll();
     g.drawImage(gradientImage, getLocalBounds().toFloat());
 
-    g.setColour(juce::Colours::white);
+    g.setColour(juce::Colours::darkslategrey);
     g.setFont(20.0f);
-    g.drawFittedText("THE DELUXE $9999 SYNTHESIZER BY JAVIN", getLocalBounds(), juce::Justification::centredBottom, 1);
+    g.drawFittedText("Welcome to Baaaaaaaa", getLocalBounds(), juce::Justification::centredBottom, 1);
 }
 
-void AudioPluginAudioProcessorEditor::resized()
+void BaaaPluginAudioProcessorEditor::resized()
 {
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
     auto area = getLocalBounds().reduced(30);
-    auto top = area.removeFromTop(int(area.getHeight() / 1.6));
+    auto top = area.removeFromTop(int(area.getHeight() / 1.4));
 
     // Sliders
     int sliderWidth = top.getWidth() / 3;
@@ -115,5 +95,4 @@ void AudioPluginAudioProcessorEditor::resized()
     // Waveform selector box
     auto bottom = getLocalBounds().reduced(20);
     bottom.removeFromTop((int)((float)(getHeight()) / 1.6f));
-    waveformBox.setBounds(bottom.removeFromTop(30));
 }
