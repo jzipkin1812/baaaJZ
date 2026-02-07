@@ -7,30 +7,37 @@
 class PhaseVocoderPitchShifter
 {
 public:
-    void prepare (double sampleRate, int fftSize = 1024, int hopSize = 256);
+    void prepare (double sampleRate);
     void setPitchRatio (float newRatio);
     float processSample (float input);
+    PhaseVocoderPitchShifter(float pitchRatio = 2.0f, float sampleRate = 44100.0f, int fftSize = 1024, int hopSize = 256);
 
 private:
     void processFrame();
 
-    double sampleRate = 44100.0;
-    int fftSize = 1024;
-    int hopSize = 256;
+    double sampleRate;
+    int fftSize;
+    int hopSize;
 
     juce::dsp::FFT fft { 10 }; // 2^10 = 1024
-    std::vector<float> window;
 
+    int hopCounter = 0;
 
     std::vector<float> inputBuffer;
     std::vector<float> outputBuffer;
-    std::vector<float> fftData;
+
+    std::vector<float> window;
 
     std::vector<float> prevPhase;
-    std::vector<float> phaseAccumulator;
+    std::vector<float> phaseAcc;
 
-    int inputWritePos = 0;
-    int outputReadPos = 0;
+    std::vector<float> fftIn;
+    std::vector<float> fftOut;
 
-    float pitchRatio = 1.0f;
+    int inputWritePos;
+    int outputReadPos;
+
+    float pitchRatio;
+    int outputWritePos = 0;
+
 };

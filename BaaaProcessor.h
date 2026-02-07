@@ -3,6 +3,7 @@
 #include "DSP/utility.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "DSP/shifter.h"
+#include <vector>
 //==============================================================================
 class BaaaPluginAudioProcessor final : public juce::AudioProcessor
 {
@@ -56,6 +57,7 @@ private:
     int currentNote;
     float velocity;
 
-    PhaseVocoderPitchShifter shifter;
+    std::vector<PhaseVocoderPitchShifter> shifters;
+
 
 };

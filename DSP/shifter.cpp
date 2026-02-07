@@ -1,96 +1,125 @@
-// This code is vibecoded by ChatGPT. All of it is about to change.
 
 #include "shifter.h"
 #include "math.h"
-void PhaseVocoderPitchShifter::prepare (double sr, int size, int hop)
+
+PhaseVocoderPitchShifter::PhaseVocoderPitchShifter(float pitchRatio, float sampleRate, int fftSize, int hopSize) 
+{
+    this->pitchRatio = pitchRatio;
+    this->sampleRate = sampleRate;
+    this->fftSize = fftSize;
+    this->hopSize = hopSize;
+
+    this->inputWritePos = 0;
+    this->outputReadPos = 0;
+
+}
+
+void PhaseVocoderPitchShifter::prepare (double sr)
 {
     sampleRate = sr;
-    fftSize = size;
-    hopSize = hop;
+    fftSize = 1024;
+    hopSize = 256;
 
-    fft = juce::dsp::FFT (log2(fftSize));
-    window.resize (fftSize);
-    for (int i = 0; i < fftSize; ++i)
-    {
-        window[i] = 0.5f * (1.0f
-            - std::cos (2.0f * juce::MathConstants<float>::pi * i / fftSize));
-    }
-
+    fft = juce::dsp::FFT (10);
 
     inputBuffer.assign (fftSize, 0.0f);
     outputBuffer.assign (fftSize, 0.0f);
-    fftData.assign (2 * fftSize, 0.0f);
+
+    fftIn.assign (2 * fftSize, 0.0f);
+    fftOut.assign (2 * fftSize, 0.0f);
 
     prevPhase.assign (fftSize / 2 + 1, 0.0f);
-    phaseAccumulator.assign (fftSize / 2 + 1, 0.0f);
+    phaseAcc.assign (fftSize / 2 + 1, 0.0f);
+
+    window.resize (fftSize);
+    for (int i = 0; i < fftSize; ++i)
+        window[i] = 0.5f * (1.0f -
+            std::cos (2.0f * juce::MathConstants<float>::pi * i / fftSize));
 }
 
 float PhaseVocoderPitchShifter::processSample (float input)
 {
-    inputBuffer[inputWritePos++] = input;
+    // write input into circular buffer
+    inputBuffer[inputWritePos] = input;
 
-    float out = outputBuffer[outputReadPos++];
-    outputBuffer[outputReadPos - 1] = 0.0f;
+    // read output from circular buffer
+    float out = outputBuffer[outputReadPos];
+    outputBuffer[outputReadPos] = 0.0f;
 
-    if (inputWritePos >= fftSize)
+    // advance pointers
+    inputWritePos  = (inputWritePos + 1) % fftSize;
+    outputReadPos  = (outputReadPos + 1) % fftSize;
+
+    // hop logic
+    if (++hopCounter >= hopSize)
     {
+        hopCounter = 0;
         processFrame();
-        inputWritePos = 0;
-        outputReadPos = 0;
+        outputWritePos = (outputWritePos + hopSize) % fftSize;
     }
 
     return out;
 }
-
 void PhaseVocoderPitchShifter::processFrame()
 {
-    // Window input
+    std::fill (fftIn.begin(), fftIn.end(), 0.0f);
+    std::fill (fftOut.begin(), fftOut.end(), 0.0f);
+
+    // --- Analysis ---
     for (int i = 0; i < fftSize; ++i)
-        fftData[2 * i] = inputBuffer[i] * window[i];
+    {
+        int idx = (inputWritePos + i) % fftSize;
+        fftIn[2 * i] = inputBuffer[idx] * window[i];
+    }
 
-    std::fill (fftData.begin() + 1, fftData.end(), 0.0f);
-
-    fft.performRealOnlyForwardTransform (fftData.data());
+    fft.performRealOnlyForwardTransform (fftIn.data());
 
     const int numBins = fftSize / 2;
+    const float expectedPhaseAdvance =
+        juce::MathConstants<float>::twoPi * hopSize / fftSize;
 
-    for (int k = 0; k <= numBins; ++k)
+    for (int k = 1; k <= numBins; ++k)
     {
-        int idx = 2 * k;
-        float real = fftData[idx];
-        float imag = fftData[idx + 1];
+        const int idx = 2 * k;
 
-        float mag = std::sqrt (real * real + imag * imag);
+        float real = fftIn[idx];
+        float imag = fftIn[idx + 1];
+
+        float mag   = std::hypot (real, imag);
         float phase = std::atan2 (imag, real);
 
-        float deltaPhase = phase - prevPhase[k];
+        float delta = phase - prevPhase[k];
         prevPhase[k] = phase;
 
-        float expected = 2.0f * juce::MathConstants<float>::pi * k * hopSize / fftSize;
-        float phaseError = deltaPhase - expected;
+        float expected = expectedPhaseAdvance * k;
+        delta -= expected;
 
-        phaseError -= juce::MathConstants<float>::twoPi
-            * std::round (phaseError / juce::MathConstants<float>::twoPi);
+        delta -= juce::MathConstants<float>::twoPi *
+                 std::round (delta / juce::MathConstants<float>::twoPi);
 
-        float trueFreq = expected + phaseError;
-        phaseAccumulator[k] += trueFreq * pitchRatio;
+        float truePhaseAdvance = expected + delta;
+        phaseAcc[k] += truePhaseAdvance * pitchRatio;
 
         int targetBin = int (k * pitchRatio);
-        if (targetBin <= numBins)
+        if (targetBin > 0 && targetBin <= numBins)
         {
-            fftData[2 * targetBin]     += mag * std::cos (phaseAccumulator[k]);
-            fftData[2 * targetBin + 1] += mag * std::sin (phaseAccumulator[k]);
+            fftOut[2 * targetBin]     += mag * std::cos (phaseAcc[k]);
+            fftOut[2 * targetBin + 1] += mag * std::sin (phaseAcc[k]);
         }
     }
 
-    fft.performRealOnlyInverseTransform (fftData.data());
+    fft.performRealOnlyInverseTransform (fftOut.data());
 
-    // Overlap-add
+    // --- Overlap-add ---
+    float norm = 1.0f / (fftSize * 0.5f); // Hann correction
+
     for (int i = 0; i < fftSize; ++i)
-        outputBuffer[i] += fftData[2 * i] * window[i] / fftSize;
+    {
+        int idx = (outputWritePos + i) % fftSize;
+        outputBuffer[idx] += fftOut[2 * i] * window[i] * norm;
+    }
 }
-
 void PhaseVocoderPitchShifter::setPitchRatio (float newRatio)
 {
-    pitchRatio = juce::jlimit (0.5f, 2.0f, newRatio);
+    pitchRatio = juce::jlimit (-4.0f, 4.0f, newRatio);
 }

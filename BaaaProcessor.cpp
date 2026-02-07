@@ -11,10 +11,10 @@ BaaaPluginAudioProcessor::createParameterLayout()
 
     // Frequency (Hz)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        "frequency",
-        "Frequency",
-        juce::NormalisableRange<float>(20.0f, 2000.0f, 0.01f, 0.5f),
-        440.0f
+        "shiftAmt",
+        "Shift Amount (ct)",
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.5f),
+        0.0f
     ));
 
     // Output gain (dB)
@@ -55,8 +55,8 @@ BaaaPluginAudioProcessor::BaaaPluginAudioProcessor()
                        ),
                        apvts(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
-    currentNote = -1;
-    velocity = 0.0;
+    for(auto& s : shifters)
+        s = PhaseVocoderPitchShifter();
 }
 
 BaaaPluginAudioProcessor::~BaaaPluginAudioProcessor()
@@ -131,14 +131,13 @@ void BaaaPluginAudioProcessor::changeProgramName (int index, const juce::String&
 //==============================================================================
 void BaaaPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
-    juce::ignoreUnused (samplesPerBlock);
-    // prevOutput = 0.0f;
-    // prevOutput2 = 0.0f;
-    // FREQUENCY_HZ = 440.0f;
-    // phasor = Phasor(440.0f);
-    shifter.prepare(sampleRate);
+    const int numChannels = getTotalNumOutputChannels();
+
+    shifters.clear();
+    shifters.resize (numChannels);
+
+    for (auto& shifter : shifters)
+        shifter.prepare (sampleRate);
 }
 
 void BaaaPluginAudioProcessor::releaseResources()
@@ -172,34 +171,42 @@ bool BaaaPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layout
 }
 
 void BaaaPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
-                                              juce::MidiBuffer& midiMessages)
+                                             juce::MidiBuffer&)
 {
-
-    
-    // Declare channel data
     juce::ScopedNoDenormals noDenormals;
-    int totalNumInputChannels  = getTotalNumInputChannels();
-    int totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // Clear output channels with no input
-    for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    const int totalNumInputChannels  = getTotalNumInputChannels();
+    const int totalNumOutputChannels = getTotalNumOutputChannels();
+    const int numSamples = buffer.getNumSamples();
 
-    // Parameter processing
-    // Set frequency
-    // float FREQUENCY_HZ = apvts.getRawParameterValue("frequency")->load();
-    // quasiWaveform.setFrequency(FREQUENCY_HZ);
-    // Set gain
-    float gainDb = apvts.getRawParameterValue("outputGain")->load();
-    float gainLinear = juce::Decibels::decibelsToGain(gainDb);
-    float velocityLinear = ((float)(velocity) / 127.0f);
+    for (int ch = totalNumInputChannels; ch < totalNumOutputChannels; ++ch)
+        buffer.clear (ch, 0, numSamples);
 
-    // Actual signal processing
-    auto* data = buffer.getWritePointer (0);
-    for (int i = 0; i < buffer.getNumSamples(); ++i)
+    const float gainDb =
+        apvts.getRawParameterValue ("outputGain")->load();
+    const float gainLinear =
+        juce::Decibels::decibelsToGain (gainDb);
+
+    const float semitones =
+        apvts.getRawParameterValue ("shiftAmt")->load();
+
+    const float pitchRatio = std::pow (2.0f, semitones / 12.0f);
+
+
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
-        float shifted = shifter.processSample (data[i]);
-        data[i] = data[i] + 0.7f * shifted;
+        auto* data = buffer.getWritePointer (ch);
+        auto& shifter = shifters[ch];
+
+        shifter.setPitchRatio (pitchRatio);
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const float dry = data[i];
+            const float wet = shifter.processSample (dry);
+
+            data[i] = (wet) * gainLinear;
+        }
     }
 }
 

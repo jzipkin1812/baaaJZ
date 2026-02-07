@@ -24,7 +24,7 @@ BaaaPluginAudioProcessorEditor::BaaaPluginAudioProcessorEditor (BaaaPluginAudioP
 {
     juce::ignoreUnused (processorRef);
     // Slider labels
-    stylizeSlider(freqLabel, freqSlider, "Frequency (Hz)");
+    stylizeSlider(freqLabel, freqSlider, "Shift Ratio");
     stylizeSlider(gainLabel, gainSlider, "Output (dB)");
     stylizeSlider(upDupeLabel, upDupeSlider, "Superpositions Up");
     stylizeSlider(downDupeLabel, downDupeSlider, "Superpositions Down");
@@ -36,7 +36,7 @@ BaaaPluginAudioProcessorEditor::BaaaPluginAudioProcessorEditor (BaaaPluginAudioP
 
     // Attachments for sliders
     freqAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        p.apvts, "frequency", freqSlider);
+        p.apvts, "shiftAmt", freqSlider);
 
     gainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         p.apvts, "outputGain", gainSlider);
