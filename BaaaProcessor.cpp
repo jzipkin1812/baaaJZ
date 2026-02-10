@@ -131,7 +131,8 @@ void BaaaPluginAudioProcessor::changeProgramName (int index, const juce::String&
 //==============================================================================
 void BaaaPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    const int numChannels = getTotalNumOutputChannels();
+    juce::ignoreUnused (samplesPerBlock);
+    const size_t numChannels = (size_t)getTotalNumOutputChannels();
 
     shifters.clear();
     shifters.resize (numChannels);
@@ -196,7 +197,7 @@ void BaaaPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         auto* data = buffer.getWritePointer (ch);
-        auto& shifter = shifters[ch];
+        auto& shifter = shifters[(size_t)(ch)];
 
         shifter.setPitchRatio (pitchRatio);
 
