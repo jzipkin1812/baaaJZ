@@ -20,6 +20,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX EXTENSIONS OFF)
 
+
 # If you've installed JUCE somehow (via a package manager, or directly using the CMake install
 # target), you'll need to tell this project that it depends on the installed copy of JUCE. If you've
 # included JUCE directly in your source tree (perhaps as a submodule), you'll need to tell CMake to
@@ -28,6 +29,8 @@ set(CMAKE_CXX EXTENSIONS OFF)
 # find_package(JUCE CONFIG REQUIRED)        # If you've installed JUCE to your system
 # or
 add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
+
+# target_include_directories(Gamma INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Gamma)
 
 # If you are building a VST2 or AAX plugin, CMake needs to be told where to find these SDKs on your
 # system. This setup should be done before calling `juce_add_plugin`.
@@ -72,11 +75,26 @@ juce_generate_juce_header(plugin)
 # Finally, we supply a list of source files that will be built into the target. This is a standard
 # CMake command.
 
+# GAMMA 
+file(GLOB GAMMA_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/Gamma/src/*.cpp
+)
+
+list(FILTER GAMMA_SOURCES EXCLUDE REGEX "AudioIO.cpp")
+
 target_sources(plugin
     PRIVATE
         BaaaEditor.cpp
         BaaaProcessor.cpp
-        DSP/shifter.cpp)
+        DSP/shifter.cpp
+        ${GAMMA_SOURCES})
+
+
+
+target_include_directories(plugin
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/Gamma
+)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
@@ -90,7 +108,10 @@ target_compile_definitions(plugin
         # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
         JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
         JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
-        JUCE_VST3_CAN_REPLACE_VST2=0)
+        JUCE_VST3_CAN_REPLACE_VST2=0
+        NO_AUDIO_IO=1
+        __STDC_CONSTANT_MACROS
+)
 
 # If your target needs extra binary assets, you can add them here. The first argument is the name of
 # a new static library target that will include all the binary resources. There is an optional

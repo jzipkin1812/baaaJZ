@@ -1,13 +1,26 @@
 
 #include "shifter.h"
 #include "math.h"
+#include "Gamma/Analysis.h"
+#include "Gamma/DFT.h"
+#include "Gamma/SamplePlayer.h"
 
-PhaseVocoderPitchShifter::PhaseVocoderPitchShifter(float pitchRatio, float sampleRate, int fftSize, int hopSize) 
+PhaseVocoderPitchShifter::PhaseVocoderPitchShifter(float pRatio, float sRate, int fSize, int hSize) 
 {
-    this->pitchRatio = pitchRatio;
-    this->sampleRate = sampleRate;
-    this->fftSize = fftSize;
-    this->hopSize = hopSize;
+    gam::STFT stft{
+      2048,      // Window size
+      2048 / 4,  // Hop size; number of samples between transforms
+      0,         // Pad size; number of zero-valued samples appended to window
+      gam::HANN,      // Window type: BARTLETT, BLACKMAN, BLACKMAN_HARRIS,
+                 //		HAMMING, HANN, WELCH, NYQUIST, or RECTANGLE
+      gam::COMPLEX    // Format of frequency samples:
+                 //		COMPLEX, MAG_PHASE, or MAG_FREQ
+    };
+
+    this->pitchRatio = pRatio;
+    this->sampleRate = sRate;
+    this->fftSize = fSize;
+    this->hopSize = hSize;
 
     this->inputWritePos = 0;
     this->outputReadPos = 0;
