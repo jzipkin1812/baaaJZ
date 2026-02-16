@@ -24,7 +24,7 @@ BaaaPluginAudioProcessorEditor::BaaaPluginAudioProcessorEditor (BaaaPluginAudioP
 {
     juce::ignoreUnused (processorRef);
     // Slider labels
-    stylizeSlider(freqLabel, freqSlider, "Shift Ratio");
+    stylizeSlider(freqLabel, freqSlider, "Shift Amount (ct)");
     stylizeSlider(gainLabel, gainSlider, "Output (dB)");
     stylizeSlider(upDupeLabel, upDupeSlider, "Superpositions Up");
     stylizeSlider(downDupeLabel, downDupeSlider, "Superpositions Down");
