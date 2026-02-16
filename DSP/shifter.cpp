@@ -17,10 +17,6 @@ PhaseVocoderPitchShifter::PhaseVocoderPitchShifter(float pRatio, float sRate, un
 
 void PhaseVocoderPitchShifter::prepare (double sr)
 {
-    sampleRate = sr;
-
-    gam::sampleRate(sr);
-
     stft = gam::STFT{
         fftSize,
         hopSize,

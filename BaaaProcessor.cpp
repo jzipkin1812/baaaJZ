@@ -132,6 +132,8 @@ void BaaaPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     juce::ignoreUnused (samplesPerBlock);
     const size_t numChannels = (size_t)getTotalNumOutputChannels();
 
+    gam::sampleRate(sampleRate);
+
     shifters.clear();
 
     for (size_t i = 0; i < getTotalNumOutputChannels(); ++i)
