@@ -2,6 +2,8 @@
 #include "BaaaEditor.h"
 #include "DSP/utility.h"
 #include <iostream>
+using namespace std;
+
 
 // INPUT HANDLING
 juce::AudioProcessorValueTreeState::ParameterLayout
@@ -214,9 +216,9 @@ void BaaaPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         for (int i = 0; i < numSamples; ++i)
         {
             const float dry = data[i];
-            // const float wet = shifter.processSample (dry);
+            const float wet = shifter.processSample (dry);
 
-            // data[i] = (wet) * gainLinear;
+            data[i] = (wet) * gainLinear;
         }
     }
 }

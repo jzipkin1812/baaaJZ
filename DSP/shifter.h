@@ -14,7 +14,17 @@ public:
     void prepare (double sampleRate);
     void setPitchRatio (float newRatio);
     float processSample (float input);
-    PhaseVocoderPitchShifter(float pRatio = 2.0f, float sRate = 44100.0f, unsigned int fSize = 1024, unsigned int hSize = 256);
+    PhaseVocoderPitchShifter(float pRatio,
+                              float sRate,
+                              unsigned int fSize,
+                              unsigned int hSize)
+        : pitchRatio(pRatio),
+          sampleRate(sRate),
+          fftSize(fSize),
+          hopSize(hSize),
+          stft(fSize, hSize, 0, gam::HANN, gam::COMPLEX)
+    {
+    }
 
 private:
     void processFrame();
