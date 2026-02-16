@@ -3,6 +3,10 @@
 #pragma once
 #include <vector>
 #include <JuceHeader.h>
+#include "Gamma/Analysis.h"
+#include "Gamma/DFT.h"
+#include "Gamma/SamplePlayer.h"
+#include "utility.h"
 
 class PhaseVocoderPitchShifter
 {
@@ -10,34 +14,22 @@ public:
     void prepare (double sampleRate);
     void setPitchRatio (float newRatio);
     float processSample (float input);
-    PhaseVocoderPitchShifter(float pRatio = 2.0f, float sRate = 44100.0f, int fSize = 1024, int hSize = 256);
+    PhaseVocoderPitchShifter(float pRatio = 2.0f, float sRate = 44100.0f, unsigned int fSize = 1024, unsigned int hSize = 256);
 
 private:
     void processFrame();
 
     double sampleRate;
-    int fftSize;
-    int hopSize;
-
-    juce::dsp::FFT fft { 10 }; // 2^10 = 1024
-
-    int hopCounter = 0;
-
-    std::vector<float> inputBuffer;
-    std::vector<float> outputBuffer;
-
-    std::vector<float> window;
-
-    std::vector<float> prevPhase;
-    std::vector<float> phaseAcc;
-
-    std::vector<float> fftIn;
-    std::vector<float> fftOut;
-
-    int inputWritePos;
-    int outputReadPos;
-
+    unsigned int fftSize;
+    unsigned int hopSize;
     float pitchRatio;
-    int outputWritePos = 0;
+    gam::STFT stft;
+    LerpArray<gam::STFT::bin_type> binData;
+
+    PhaseVocoderPitchShifter(const PhaseVocoderPitchShifter&) = delete;
+    PhaseVocoderPitchShifter& operator=(const PhaseVocoderPitchShifter&) = delete;
+    PhaseVocoderPitchShifter(PhaseVocoderPitchShifter&&) = delete;
+    PhaseVocoderPitchShifter& operator=(PhaseVocoderPitchShifter&&) = delete;
+
 
 };

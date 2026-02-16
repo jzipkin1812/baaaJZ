@@ -57,7 +57,7 @@ private:
     int currentNote;
     float velocity;
 
-    std::vector<PhaseVocoderPitchShifter> shifters;
+    std::vector<std::unique_ptr<PhaseVocoderPitchShifter>> shifters;
 
 
 };

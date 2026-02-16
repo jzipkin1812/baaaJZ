@@ -55,8 +55,6 @@ BaaaPluginAudioProcessor::BaaaPluginAudioProcessor()
                        ),
                        apvts(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
-    for(auto& s : shifters)
-        s = PhaseVocoderPitchShifter();
 }
 
 BaaaPluginAudioProcessor::~BaaaPluginAudioProcessor()
@@ -135,10 +133,20 @@ void BaaaPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     const size_t numChannels = (size_t)getTotalNumOutputChannels();
 
     shifters.clear();
-    shifters.resize (numChannels);
 
-    for (auto& shifter : shifters)
-        shifter.prepare (sampleRate);
+    for (size_t i = 0; i < getTotalNumOutputChannels(); ++i)
+    {
+        auto shifter = std::make_unique<PhaseVocoderPitchShifter>(
+            1.0f,
+            sampleRate,
+            2048,
+            512
+        );
+
+        shifter->prepare(sampleRate);
+
+        shifters.push_back(std::move(shifter));
+    }
 }
 
 void BaaaPluginAudioProcessor::releaseResources()
@@ -197,16 +205,16 @@ void BaaaPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         auto* data = buffer.getWritePointer (ch);
-        auto& shifter = shifters[(size_t)(ch)];
+        auto& shifter = *shifters[(size_t)ch];
 
         shifter.setPitchRatio (pitchRatio);
 
         for (int i = 0; i < numSamples; ++i)
         {
             const float dry = data[i];
-            const float wet = shifter.processSample (dry);
+            // const float wet = shifter.processSample (dry);
 
-            data[i] = (wet) * gainLinear;
+            // data[i] = (wet) * gainLinear;
         }
     }
 }

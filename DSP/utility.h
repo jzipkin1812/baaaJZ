@@ -70,20 +70,28 @@ inline float phaseWrap(float phase) {
     return(phase - std::floor(phase));
 }
 
-class ArrayFloat : public std::vector<float> {
+template <typename T> T lerp(T a, T b, float t) 
+{ 
+    return a * (1.0f - t) + b * t; 
+}
+
+template <typename T> class LerpArray : public std::vector<T> {
+    
     public:
-    float lookup(float index) { 
-        size_t to_the_left = (size_t)index;
-        size_t to_the_right = (to_the_left == (size() - 1)) ? 0 : to_the_left + 1;
-        float t = index - (float)to_the_left;
-        return operator[](to_the_left) * (1 - t) + t * operator[](to_the_right);
+
+    T lookup(float samples) { 
+        size_t to_the_left = static_cast<size_t>(std::floor(samples));
+        size_t to_the_right = (to_the_left == (this->size() - 1u)) ? 0u : to_the_left + 1u;
+        float t = samples - (float)to_the_left;
+        return lerp(this->operator[](to_the_left), this->operator[](to_the_right), t);
     }
-    float phasor(float t) { 
-        return lookup(float(size()) * t);
+
+    T phasor(float t) { 
+        return lookup(this->size() * t);
     }
 };
 
-class DelayLine : public ArrayFloat {
+class DelayLine : public LerpArray<float> {
     size_t index = 0;
     public:
 
@@ -102,7 +110,7 @@ class DelayLine : public ArrayFloat {
 };
 
 inline float sint(float t) {
-    struct TableSine : ArrayFloat {
+    struct TableSine : LerpArray<float> {
         TableSine() {
         resize(4096);
         for (size_t i = 0; i < size(); ++i) {
