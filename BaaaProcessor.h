@@ -3,6 +3,7 @@
 #include "DSP/utility.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "DSP/shifter.h"
+#include "DSP/shepard.h"
 #include <vector>
 //==============================================================================
 class BaaaPluginAudioProcessor final : public juce::AudioProcessor
@@ -53,11 +54,6 @@ private:
     // Input handling for sliders
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    // MIDI state variables
-    int currentNote;
-    float velocity;
-
-    std::vector<std::unique_ptr<PhaseVocoderPitchShifter>> shifters;
-
-
+    // DSP
+    std::unique_ptr<Shepard> shepard;
 };

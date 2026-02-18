@@ -87,6 +87,7 @@ target_sources(plugin
         BaaaEditor.cpp
         BaaaProcessor.cpp
         DSP/shifter.cpp
+        DSP/shepard.cpp
         ${GAMMA_SOURCES})
 
 

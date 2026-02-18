@@ -11,12 +11,12 @@ BaaaPluginAudioProcessor::createParameterLayout()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
-    // Frequency (Hz)
+    // Shift Amount (ct)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         "shiftAmt",
         "Shift Amount (ct)",
-        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.5f),
-        0.0f
+        juce::NormalisableRange<float> (0.0f, 24.0f, 0.5f),
+        12.0f
     ));
 
     // Output gain (dB)
@@ -28,17 +28,15 @@ BaaaPluginAudioProcessor::createParameterLayout()
     ));
 
     // Superpositions
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    params.push_back(std::make_unique<juce::AudioParameterInt>(
         "upCount",
         "Superpositions Up",
-        juce::NormalisableRange<float>(0.0f, 10.0f, 1.0f),
-        0.5f
+        0, 5, 2
     ));
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    params.push_back(std::make_unique<juce::AudioParameterInt>(
         "downCount",
         "Superpositions Down",
-        juce::NormalisableRange<float>(0.0f, 10.0f, 1.0f),
-        0.5f
+        0, 5, 2
     ));
 
     return { params.begin(), params.end() };
@@ -135,22 +133,9 @@ void BaaaPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     const size_t numChannels = (size_t)getTotalNumOutputChannels();
 
     gam::sampleRate(sampleRate);
+    
+    shepard = std::make_unique<Shepard>(Shepard(numChannels, 10, sampleRate));
 
-    shifters.clear();
-
-    for (size_t i = 0; i < getTotalNumOutputChannels(); ++i)
-    {
-        auto shifter = std::make_unique<PhaseVocoderPitchShifter>(
-            1.0f,
-            sampleRate,
-            2048,
-            512
-        );
-
-        shifter->prepare(sampleRate);
-
-        shifters.push_back(std::move(shifter));
-    }
 }
 
 void BaaaPluginAudioProcessor::releaseResources()
@@ -186,6 +171,7 @@ bool BaaaPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layout
 void BaaaPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                              juce::MidiBuffer&)
 {
+    // Clear old inputs
     juce::ScopedNoDenormals noDenormals;
 
     const int totalNumInputChannels  = getTotalNumInputChannels();
@@ -195,28 +181,28 @@ void BaaaPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (int ch = totalNumInputChannels; ch < totalNumOutputChannels; ++ch)
         buffer.clear (ch, 0, numSamples);
 
-    const float gainDb =
-        apvts.getRawParameterValue ("outputGain")->load();
-    const float gainLinear =
-        juce::Decibels::decibelsToGain (gainDb);
-
-    const float semitones =
-        apvts.getRawParameterValue ("shiftAmt")->load();
-
+    // Process editor parameters
+    const float gainDb = apvts.getRawParameterValue("outputGain")->load();
+    const float gainLinear = juce::Decibels::decibelsToGain (gainDb);
+    const float semitones = apvts.getRawParameterValue("shiftAmt")->load();
     const float pitchRatio = std::pow (2.0f, semitones / 12.0f);
 
+    const unsigned int up = (const unsigned int)apvts.getRawParameterValue("upCount")->load();
+    const unsigned int down = (const unsigned int)apvts.getRawParameterValue("downCount")->load();
+
+    shepard->setPitchRatio(pitchRatio);
+    shepard->setSuperpositionsUp(up);
+    shepard->setSuperpositionsDown(down);
 
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         auto* data = buffer.getWritePointer (ch);
-        auto& shifter = *shifters[(size_t)ch];
-
-        shifter.setPitchRatio (pitchRatio);
+        // auto& shifter = *(shepard->getShifter(ch, 1));
 
         for (int i = 0; i < numSamples; ++i)
         {
             const float dry = data[i];
-            const float wet = shifter.processSample (dry);
+            const float wet = shepard->processSample(dry, ch);
 
             data[i] = (wet) * gainLinear;
         }
