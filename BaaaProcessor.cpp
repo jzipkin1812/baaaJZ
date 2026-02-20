@@ -39,6 +39,21 @@ BaaaPluginAudioProcessor::createParameterLayout()
         0, 5, 2
     ));
 
+    // Center and falloff
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "centerFrequency",
+        "Center Frequency (Hz)",
+        juce::NormalisableRange<float>(20.0f, 2000.0f, 1.0f, 0.5f),
+        440.0f
+    ));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "falloff",
+        "Falloff (Db/Hz)",
+        juce::NormalisableRange<float>(0.0f, 6.0f, 0.01f),
+        1.0f
+    ));
+
     return { params.begin(), params.end() };
 }
 
@@ -130,11 +145,11 @@ void BaaaPluginAudioProcessor::changeProgramName (int index, const juce::String&
 void BaaaPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     juce::ignoreUnused (samplesPerBlock);
-    const size_t numChannels = (size_t)getTotalNumOutputChannels();
+    const unsigned int numChannels = (unsigned int)getTotalNumOutputChannels();
 
     gam::sampleRate(sampleRate);
     
-    shepard = std::make_unique<Shepard>(Shepard(numChannels, 10, sampleRate));
+    shepard = std::make_unique<Shepard>(Shepard(numChannels, 10, (float)(sampleRate)));
 
 }
 
@@ -174,18 +189,20 @@ void BaaaPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // Clear old inputs
     juce::ScopedNoDenormals noDenormals;
 
-    const int totalNumInputChannels  = getTotalNumInputChannels();
-    const int totalNumOutputChannels = getTotalNumOutputChannels();
-    const int numSamples = buffer.getNumSamples();
+    const unsigned int totalNumInputChannels  = (unsigned int)getTotalNumInputChannels();
+    const unsigned int totalNumOutputChannels = (unsigned int)getTotalNumOutputChannels();
+    const unsigned int numSamples = (unsigned int)buffer.getNumSamples();
 
-    for (int ch = totalNumInputChannels; ch < totalNumOutputChannels; ++ch)
-        buffer.clear (ch, 0, numSamples);
+    for (unsigned int ch = totalNumInputChannels; ch < totalNumOutputChannels; ++ch)
+        buffer.clear ((int)ch, 0, (int)numSamples);
 
     // Process editor parameters
     const float gainDb = apvts.getRawParameterValue("outputGain")->load();
     const float gainLinear = juce::Decibels::decibelsToGain (gainDb);
     const float semitones = apvts.getRawParameterValue("shiftAmt")->load();
     const float pitchRatio = std::pow (2.0f, semitones / 12.0f);
+    const float centerFrequency = apvts.getRawParameterValue("centerFrequency")->load();
+    const float falloff = apvts.getRawParameterValue("falloff")->load();
 
     const unsigned int up = (const unsigned int)apvts.getRawParameterValue("upCount")->load();
     const unsigned int down = (const unsigned int)apvts.getRawParameterValue("downCount")->load();
@@ -194,12 +211,12 @@ void BaaaPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     shepard->setSuperpositionsUp(up);
     shepard->setSuperpositionsDown(down);
 
-    for (int ch = 0; ch < totalNumInputChannels; ++ch)
+    for (unsigned int ch = 0; ch < totalNumInputChannels; ++ch)
     {
-        auto* data = buffer.getWritePointer (ch);
+        auto* data = buffer.getWritePointer((int)ch);
         // auto& shifter = *(shepard->getShifter(ch, 1));
 
-        for (int i = 0; i < numSamples; ++i)
+        for (unsigned int i = 0; i < numSamples; ++i)
         {
             const float dry = data[i];
             const float wet = shepard->processSample(dry, ch);

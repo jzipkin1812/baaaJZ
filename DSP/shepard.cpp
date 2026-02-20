@@ -22,7 +22,9 @@ Shepard::Shepard(unsigned int channels, unsigned int shiftPerChannel, float sr) 
             1.0f,
             sampleRate,
             2048,
-            512
+            512,
+            1000.0f,
+            100.0f
         );
         shifter->prepare(sampleRate);
         shifters.push_back(std::move(shifter));
@@ -30,10 +32,6 @@ Shepard::Shepard(unsigned int channels, unsigned int shiftPerChannel, float sr) 
 
     superpositionsDown = 1;
     superpositionsUp = 1;
-}
-
-void Shepard::setPitchRatio(float newRatio) {
-    pitchRatio = newRatio;
 }
 
 std::unique_ptr<PhaseVocoderPitchShifter>& Shepard::getShifter(unsigned int channel, int pos) {
@@ -64,6 +62,8 @@ float Shepard::processSample(float input, unsigned int channel)
 
         auto& sh = getShifter(channel, -(int)i);
         sh->setPitchRatio(ratio);
+        sh->setFalloff(falloff);
+        sh->setCenterFrequency(centerFrequency);
 
         output += sh->processSample(input);
         ++activeVoices;
@@ -76,6 +76,8 @@ float Shepard::processSample(float input, unsigned int channel)
 
         auto& sh = getShifter(channel, (int)i);
         sh->setPitchRatio(ratio);
+        sh->setFalloff(falloff);
+        sh->setCenterFrequency(centerFrequency);
 
         output += sh->processSample(input);
         ++activeVoices;

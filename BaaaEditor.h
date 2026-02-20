@@ -13,23 +13,27 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    juce::Slider freqSlider;
+    juce::Slider shiftSlider;
     juce::Slider gainSlider;
     juce::Slider upDupeSlider;
     juce::Slider downDupeSlider;
+    juce::Slider centerSlider;
+    juce::Slider falloffSlider;
 
 
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> freqAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> shiftAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> upDupeAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> downDupeAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> centerAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> falloffAttachment;
 
-    juce::Label freqLabel;
+    juce::Label shiftLabel;
     juce::Label gainLabel;
     juce::Label upDupeLabel;
     juce::Label downDupeLabel;
-
-
+    juce::Label centerLabel;
+    juce::Label falloffLabel;
 
 private:
     // This reference is provided as a quick way for your editor to

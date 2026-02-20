@@ -24,19 +24,23 @@ BaaaPluginAudioProcessorEditor::BaaaPluginAudioProcessorEditor (BaaaPluginAudioP
 {
     juce::ignoreUnused (processorRef);
     // Slider labels
-    stylizeSlider(freqLabel, freqSlider, "Shift Amount (ct)");
+    stylizeSlider(shiftLabel, shiftSlider, "Shift Amount (ct)");
     stylizeSlider(gainLabel, gainSlider, "Output (dB)");
     stylizeSlider(upDupeLabel, upDupeSlider, "Superpositions Up");
     stylizeSlider(downDupeLabel, downDupeSlider, "Superpositions Down");
+    stylizeSlider(centerLabel, centerSlider, "Center Frequency (Hz)");
+    stylizeSlider(falloffLabel, falloffSlider, "Falloff (Db/Hz)");
 
-    addAndMakeVisible(freqSlider);
+    addAndMakeVisible(shiftSlider);
     addAndMakeVisible(gainSlider);
     addAndMakeVisible(upDupeSlider);
     addAndMakeVisible(downDupeSlider);
+    addAndMakeVisible(centerSlider);
+    addAndMakeVisible(falloffSlider);
 
     // Attachments for sliders
-    freqAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        p.apvts, "shiftAmt", freqSlider);
+    shiftAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        p.apvts, "shiftAmt", shiftSlider);
 
     gainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         p.apvts, "outputGain", gainSlider);
@@ -46,6 +50,12 @@ BaaaPluginAudioProcessorEditor::BaaaPluginAudioProcessorEditor (BaaaPluginAudioP
     
     downDupeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         p.apvts, "downCount", downDupeSlider);
+
+    centerAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        p.apvts, "centerFrequency", centerSlider);
+
+    falloffAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        p.apvts, "falloff", falloffSlider);
 
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
@@ -88,10 +98,12 @@ void BaaaPluginAudioProcessorEditor::resized()
     auto top = area.removeFromTop(int(area.getHeight() / 1.25));
 
     // Sliders
-    int sliderWidth = top.getWidth() / 4;
-    freqSlider.setBounds(top.removeFromLeft(sliderWidth));
+    int sliderWidth = top.getWidth() / 6;
+    shiftSlider.setBounds(top.removeFromLeft(sliderWidth));
     gainSlider.setBounds(top.removeFromLeft(sliderWidth));
     upDupeSlider.setBounds(top.removeFromLeft(sliderWidth));
     downDupeSlider.setBounds(top.removeFromLeft(sliderWidth));
+    centerSlider.setBounds(top.removeFromLeft(sliderWidth));
+    falloffSlider.setBounds(top.removeFromLeft(sliderWidth));
 
 }

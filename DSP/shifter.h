@@ -10,8 +10,10 @@
 class PhaseVocoderPitchShifter
 {
 public:
-    void prepare (double sampleRate);
-    void setPitchRatio (float newRatio);
+    void prepare (float sampleRate);
+    void setPitchRatio (float newRatio) {pitchRatio = juce::jlimit (0.25f, 32.0f, newRatio);}
+    void setCenterFrequency (float newFrequency) {centerFrequency = newFrequency;}
+    void setFalloff (float newFalloff) {falloff = newFalloff;}
     float processSample (float input);
     PhaseVocoderPitchShifter(float pRatio,
                               float sRate,
@@ -21,24 +23,52 @@ public:
             fftSize(fSize),
             hopSize(hSize),
             pitchRatio(pRatio),
+            makeItShepard(false),
+            centerFrequency(0.0),
+            falloff(0.0),
+            stft(fSize, hSize, 0, gam::HANN, gam::COMPLEX)
+    {
+    }
+
+    PhaseVocoderPitchShifter(float pRatio,
+                              float sRate,
+                              unsigned int fSize,
+                              unsigned int hSize,
+                              float center,
+                              float falloffAmount)
+            : sampleRate(sRate),
+            fftSize(fSize),
+            hopSize(hSize),
+            pitchRatio(pRatio),
+            makeItShepard(true),
+            centerFrequency(center),
+            falloff(falloffAmount),
             stft(fSize, hSize, 0, gam::HANN, gam::COMPLEX)
     {
     }
 
 private:
-    double sampleRate;
+    float sampleRate;
     unsigned int fftSize;
     unsigned int hopSize;
     float pitchRatio;
-    gam::STFT stft;
-    LerpArray<gam::STFT::bin_type> binData;
-    std::vector<float> analysisMag;
-    std::vector<bool> isPeak;
 
+    // This shifter is used in conjunction with the Shepard class.
+    // It can be a standalone shifter OR
+    // can also accomplish the job of modifying volume
+    // based on a center frequency.
+    bool makeItShepard;
+    float centerFrequency;
+    float falloff;
+
+    gam::STFT stft;
+    // Supplemental state info for STFT
+    LerpArray<gam::STFT::bin_type> binData;
     std::vector<float> prevPhase;
     std::vector<float> sumPhase;
     float expectedPhaseAdvance = 0.0f;
     bool prepared = false;
+
 
 
     PhaseVocoderPitchShifter(const PhaseVocoderPitchShifter&) = delete;

@@ -16,9 +16,12 @@ public:
     std::unique_ptr<PhaseVocoderPitchShifter>& getShifter(unsigned int channel, int pos);
     float processSample(float input, unsigned int channel);
 
-    void setPitchRatio(float newRatio);
-    void setSuperpositionsUp(unsigned int sup) {superpositionsUp = sup;};
-    void setSuperpositionsDown(unsigned int sup) {superpositionsDown = sup;};
+    void setPitchRatio(float newRatio) {pitchRatio = newRatio;}
+    void setFalloff(float newFalloff) {falloff = newFalloff;}
+    void setCenter(float newCenter) {centerFrequency = newCenter;}
+
+    void setSuperpositionsUp(unsigned int sup) {superpositionsUp = sup;}
+    void setSuperpositionsDown(unsigned int sup) {superpositionsDown = sup;}
 
 private:
     std::vector<std::unique_ptr<PhaseVocoderPitchShifter>> shifters;
@@ -26,6 +29,8 @@ private:
     unsigned int shiftersPerChannel;
     float sampleRate;
     float pitchRatio;
+    float falloff;
+    float centerFrequency;
     unsigned int superpositionsUp;
     unsigned int superpositionsDown;
 

@@ -7,7 +7,7 @@
 #include <iostream>
 using namespace std;
 
-void PhaseVocoderPitchShifter::prepare (double sr)
+void PhaseVocoderPitchShifter::prepare (float sr)
 {
     sampleRate = sr;
 
@@ -18,8 +18,6 @@ void PhaseVocoderPitchShifter::prepare (double sr)
 
     prevPhase.assign(N, 0.0f);
     sumPhase.assign(N, 0.0f);
-    analysisMag.assign(N, 0.0f);
-    isPeak.assign(N, false);
     
     expectedPhaseAdvance = 2.0f * float(M_PI) * hopSize / fftSize;
 
@@ -55,7 +53,7 @@ float PhaseVocoderPitchShifter::processSample (float input)
             float mag = c.mag() * (pitchRatio > 1 ? std::sqrt(pitchRatio) : 1.0f / std::sqrt(pitchRatio));
 
             float phase = c.arg();
-            int srcIndex = (int)src;
+            size_t srcIndex = (size_t)src;
 
             float delta = phase - prevPhase[srcIndex];
             prevPhase[srcIndex] = phase;
@@ -76,6 +74,12 @@ float PhaseVocoderPitchShifter::processSample (float input)
             // Accumulate at destination bin
             sumPhase[k] += scaledFreq;
 
+            // For shepard tones: Scale frequency.
+            if(makeItShepard) {
+                float nyquist = sampleRate / 2.0f;
+                float hertz = float(k) / stft.numBins() * nyquist;
+            }
+
             stft.bin(k) = gam::Polar<float>(mag, sumPhase[k]);
         }
 
@@ -92,9 +96,4 @@ float PhaseVocoderPitchShifter::processSample (float input)
         output = 0.0f;
 
     return output;
-}
-
-void PhaseVocoderPitchShifter::setPitchRatio (float newRatio)
-{
-    pitchRatio = juce::jlimit (0.25f, 32.0f, newRatio);
 }
