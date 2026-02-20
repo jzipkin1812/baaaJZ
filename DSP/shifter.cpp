@@ -75,9 +75,15 @@ float PhaseVocoderPitchShifter::processSample (float input)
             sumPhase[k] += scaledFreq;
 
             // For shepard tones: Scale frequency.
-            if(makeItShepard) {
+            // A falloff of 0 means falloff just isn't used.
+            if(makeItShepard && falloff > 0.001) {
                 float nyquist = sampleRate / 2.0f;
                 float hertz = float(k) / stft.numBins() * nyquist;
+                float logDistance = std::log2(hertz / centerFrequency);
+                
+                float weight = std::exp(-(logDistance * logDistance) /
+                                        (2.0f * falloff * falloff));
+                mag *= weight;
             }
 
             stft.bin(k) = gam::Polar<float>(mag, sumPhase[k]);

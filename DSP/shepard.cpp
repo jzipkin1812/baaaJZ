@@ -14,9 +14,9 @@ Shepard::Shepard(unsigned int channels, unsigned int shiftPerChannel, float sr) 
     shiftersPerChannel = shiftPerChannel;
     if(shiftersPerChannel % 2 == 1) shiftersPerChannel += 1;
 
-    shifters.reserve(channels * shiftPerChannel);
+    shifters.reserve(channels * shiftPerChannel + 1);
 
-    for (size_t i = 0; i < channels * shiftPerChannel; ++i)
+    for (size_t i = 0; i < channels * shiftPerChannel + 1; ++i)
     {
         auto shifter = std::make_unique<PhaseVocoderPitchShifter>(
             1.0f,
@@ -85,7 +85,11 @@ float Shepard::processSample(float input, unsigned int channel)
 
     // Optional: include center voice (unshifted base ratio)
     {
-        output += input;
+        auto& sh = shifters.back();
+        sh->setCenterFrequency(centerFrequency);
+        sh->setFalloff(falloff);
+        sh->setPitchRatio(1.0);
+        output += sh->processSample(input);
         ++activeVoices;
     }
 

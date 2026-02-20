@@ -49,9 +49,9 @@ BaaaPluginAudioProcessor::createParameterLayout()
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         "falloff",
-        "Falloff (Db/Hz)",
-        juce::NormalisableRange<float>(0.0f, 6.0f, 0.01f),
-        1.0f
+        "Falloff Rate",
+        juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f),
+        0.6f
     ));
 
     return { params.begin(), params.end() };
@@ -210,6 +210,8 @@ void BaaaPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     shepard->setPitchRatio(pitchRatio);
     shepard->setSuperpositionsUp(up);
     shepard->setSuperpositionsDown(down);
+    shepard->setFalloff(falloff);
+    shepard->setCenter(centerFrequency);
 
     for (unsigned int ch = 0; ch < totalNumInputChannels; ++ch)
     {
