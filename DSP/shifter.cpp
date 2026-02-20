@@ -18,7 +18,9 @@ void PhaseVocoderPitchShifter::prepare (double sr)
 
     prevPhase.assign(N, 0.0f);
     sumPhase.assign(N, 0.0f);
-
+    analysisMag.assign(N, 0.0f);
+    isPeak.assign(N, false);
+    
     expectedPhaseAdvance = 2.0f * float(M_PI) * hopSize / fftSize;
 
     prepared = true;
@@ -49,24 +51,31 @@ float PhaseVocoderPitchShifter::processSample (float input)
 
             gam::Complex<float> c = binData.lookup(src);
 
-            float mag = c.mag();
+            // Magnitude = intensity, complex portion = phase
+            float mag = c.mag() * (pitchRatio > 1 ? std::sqrt(pitchRatio) : 1.0f / std::sqrt(pitchRatio));
+
             float phase = c.arg();
+            int srcIndex = (int)src;
 
-            // Phase difference
-            float delta = phase - prevPhase[k];
-            prevPhase[k] = phase;
+            float delta = phase - prevPhase[srcIndex];
+            prevPhase[srcIndex] = phase;
 
-            // Remove expected advance
-            delta -= k * expectedPhaseAdvance;
+            // Expected phase advance based on SOURCE bin
+            float expectedSrc = srcIndex * expectedPhaseAdvance;
+            delta -= expectedSrc;
 
-            // Wrap to -pi..pi
-            delta = std::fmod(delta + float(M_PI), 2.0f * float(M_PI)) - float(M_PI);
+            while (delta >  M_PI) delta -= 2.0f * M_PI;
+            while (delta < -M_PI) delta += 2.0f * M_PI;
 
-            // Scale phase increment
-            float trueFreq = k * expectedPhaseAdvance + delta;
-            sumPhase[k] += trueFreq * pitchRatio;
+            // Instantaneous frequency at SOURCE
+            float trueFreq = expectedSrc + delta;
 
-            // Reconstruct bin
+            // Now scale frequency to DESTINATION bin
+            float scaledFreq = trueFreq * pitchRatio;
+
+            // Accumulate at destination bin
+            sumPhase[k] += scaledFreq;
+
             stft.bin(k) = gam::Polar<float>(mag, sumPhase[k]);
         }
 

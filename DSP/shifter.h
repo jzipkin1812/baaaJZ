@@ -32,6 +32,8 @@ private:
     float pitchRatio;
     gam::STFT stft;
     LerpArray<gam::STFT::bin_type> binData;
+    std::vector<float> analysisMag;
+    std::vector<bool> isPeak;
 
     std::vector<float> prevPhase;
     std::vector<float> sumPhase;

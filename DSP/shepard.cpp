@@ -34,9 +34,6 @@ Shepard::Shepard(unsigned int channels, unsigned int shiftPerChannel, float sr) 
 
 void Shepard::setPitchRatio(float newRatio) {
     pitchRatio = newRatio;
-    for (size_t i = 0; i < shifters.size(); ++i) {
-        shifters[i]->setPitchRatio(newRatio);
-    }
 }
 
 std::unique_ptr<PhaseVocoderPitchShifter>& Shepard::getShifter(unsigned int channel, int pos) {
@@ -62,7 +59,8 @@ float Shepard::processSample(float input, unsigned int channel)
     // ----- DOWN SHIFTS -----
     for (unsigned int i = 1; i <= superpositionsDown; ++i)
     {
-        float ratio = pitchRatio / std::pow(2.0f, (float)(i + 1));
+        float ratio = 1.0f / std::pow(pitchRatio, (float)(i));
+        // std::cout << "For i =" << i << ", the ratio is" << ratio << endl;
 
         auto& sh = getShifter(channel, -(int)i);
         sh->setPitchRatio(ratio);
@@ -74,7 +72,7 @@ float Shepard::processSample(float input, unsigned int channel)
     // ----- UP SHIFTS -----
     for (unsigned int i = 1; i <= superpositionsUp; ++i)
     {
-        float ratio = pitchRatio * std::pow(2.0f, (float)(i - 1));
+        float ratio = std::pow(pitchRatio, (float)(i));
 
         auto& sh = getShifter(channel, (int)i);
         sh->setPitchRatio(ratio);
@@ -85,13 +83,13 @@ float Shepard::processSample(float input, unsigned int channel)
 
     // Optional: include center voice (unshifted base ratio)
     {
-        // output += input;
-        // ++activeVoices;
+        output += input;
+        ++activeVoices;
     }
 
     // Normalize to prevent gain explosion
     if (activeVoices > 0)
-        output /= (float)activeVoices;
+        output /= (float)(std::sqrt(activeVoices));
 
     // Safety clamp
     if (!std::isfinite(output))
