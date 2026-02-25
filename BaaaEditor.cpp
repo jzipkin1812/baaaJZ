@@ -4,30 +4,46 @@
 #include <vector>
 
 
-static void stylizeSlider(juce::Label &l, juce::Slider &s, juce::String str) {
+void BaaaPluginAudioProcessorEditor::stylizeSlider(juce::Label &l, juce::Slider &s, juce::String str) {
     // Stylize the slider
-    s.setSliderStyle(juce::Slider::LinearVertical);
-    s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    s.setTextBoxStyle(juce::Slider::NoTextBox, false, 100, 20);
     s.setColour(juce::Slider::textBoxTextColourId, juce::Colours::darkslategrey);
 
     // Stylize the label
     juce::Component *c = &s;
     l.setText(str, juce::dontSendNotification);
+    l.setFont(fontSmall);
     l.setJustificationType(juce::Justification::centred);
     l.attachToComponent(c, false);
     l.setColour(juce::Label::textColourId, juce::Colours::darkslategrey);
 }
+// Same as above but for small integer steps
+void BaaaPluginAudioProcessorEditor::stylizeStepper(juce::Label &l, juce::Slider &s, juce::String str) 
+{
+    s.setSliderStyle(juce::Slider::IncDecButtons);
+    s.setRange(0, 10, 1);
+    s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 50);
 
+    l.setText(str, juce::dontSendNotification);
+    l.setFont(fontSmall);
+    l.setJustificationType(juce::Justification::centred);
+    l.attachToComponent(&s, false);
+}
 //==============================================================================
 BaaaPluginAudioProcessorEditor::BaaaPluginAudioProcessorEditor (BaaaPluginAudioProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p)
 {
     juce::ignoreUnused (processorRef);
+    setLookAndFeel(&customLook);
+
+    backgroundImage = juce::ImageCache::getFromMemory(BinaryData::background_png,
+                                                  BinaryData::background_pngSize);
     // Slider labels
     stylizeSlider(shiftLabel, shiftSlider, "Shift Amount (ct)");
     stylizeSlider(gainLabel, gainSlider, "Output (dB)");
-    stylizeSlider(upDupeLabel, upDupeSlider, "Superpositions Up");
-    stylizeSlider(downDupeLabel, downDupeSlider, "Superpositions Down");
+    stylizeStepper(upDupeLabel, upDupeSlider, "Superpositions Up");
+    stylizeStepper(downDupeLabel, downDupeSlider, "Superpositions Down");    
     stylizeSlider(centerLabel, centerSlider, "Center Frequency (Hz)");
     stylizeSlider(falloffLabel, falloffSlider, "Falloff (Db/Hz)");
 
@@ -60,50 +76,61 @@ BaaaPluginAudioProcessorEditor::BaaaPluginAudioProcessorEditor (BaaaPluginAudioP
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setResizable(true, false);
-    setResizeLimits(500, 200, 5000, 2000);
-    setSize (800, 300);
+    setResizeLimits(500, 400, 2000, 1000);
+    setSize (1000, 500);
 }
 
 BaaaPluginAudioProcessorEditor::~BaaaPluginAudioProcessorEditor()
 {
+    setLookAndFeel(nullptr);
 }
 
 //==============================================================================
 void BaaaPluginAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    auto gradient = juce::ColourGradient(
-        juce::Colour::fromRGB(127, 255, 0),
-        juce::Point<float>(0.0, 0.0),
-        juce::Colour::fromRGB(176, 224, 230),
-        juce::Point<float>((float)getWidth(), (float)getHeight()),
-        false
-    );
+    int imgW = backgroundImage.getWidth();
+    int imgH = backgroundImage.getHeight();
 
-    juce::Image gradientImage(juce::Image::ARGB, getWidth(), getHeight(), true);
-    juce::Graphics tg(gradientImage);
-    tg.setGradientFill(gradient);
-    tg.fillAll();
-    g.drawImage(gradientImage, getLocalBounds().toFloat());
+    int x = getWidth()  - imgW;
+    int y = getHeight() - imgH;
 
-    g.setColour(juce::Colours::darkslategrey);
-    g.setFont(20.0f);
-    g.drawFittedText("Welcome to Baaaaaaaa", getLocalBounds(), juce::Justification::centredBottom, 1);
+    g.drawImageAt(backgroundImage, x, y);
+    g.setFont(textSizeLarge);
+
+    juce::GlyphArrangement glyphs;
+    glyphs.addFittedText(fontLarge, "Welcome to Baaaaaaaa",
+                        0, getHeight()-40,
+                        getWidth(), 40,
+                        juce::Justification::centred,
+                        1);
+
+    juce::Path textPath;
+    glyphs.createPath(textPath);
+
+    g.setColour(outlineColour);
+    g.strokePath(textPath, juce::PathStrokeType(3.0f));
+
+    g.setColour(innerColour);
+    g.fillPath(textPath);
 }
 
 void BaaaPluginAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
-    auto area = getLocalBounds().reduced(30);
-    auto top = area.removeFromTop(int(area.getHeight() / 1.25));
+    auto area = getLocalBounds().reduced(40);
 
-    // Sliders
-    int sliderWidth = top.getWidth() / 6;
-    shiftSlider.setBounds(top.removeFromLeft(sliderWidth));
-    gainSlider.setBounds(top.removeFromLeft(sliderWidth));
-    upDupeSlider.setBounds(top.removeFromLeft(sliderWidth));
-    downDupeSlider.setBounds(top.removeFromLeft(sliderWidth));
-    centerSlider.setBounds(top.removeFromLeft(sliderWidth));
-    falloffSlider.setBounds(top.removeFromLeft(sliderWidth));
+    int half = area.getHeight() / 2;
 
+    auto knobRow = area.removeFromTop(half + 50);
+    auto bottomRow = area.removeFromTop(half - 100);
+
+    int knobWidth = knobRow.getWidth() / 4;
+
+    shiftSlider.setBounds(knobRow.removeFromLeft(knobWidth));
+    gainSlider.setBounds(knobRow.removeFromLeft(knobWidth));
+    centerSlider.setBounds(knobRow.removeFromLeft(knobWidth));
+    falloffSlider.setBounds(knobRow.removeFromLeft(knobWidth));
+
+    int stepWidth = bottomRow.getWidth() / 2;
+    upDupeSlider.setBounds(bottomRow.removeFromLeft(stepWidth));
+    downDupeSlider.setBounds(bottomRow);
 }

@@ -59,8 +59,13 @@ juce_add_plugin(plugin
     PLUGIN_CODE Baaa                            # A unique four-character plugin id with exactly one upper-case character
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
     FORMATS AU VST3 Standalone                  # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
-    PRODUCT_NAME "Baaaaaaaa")        # The name of the final executable, which can differ from the target name
+    PRODUCT_NAME "Baaaaaaaa"
+) 
 
+juce_add_binary_data(PluginAssets
+    SOURCES
+        Assets/background.png
+)
 
 # `juce_generate_juce_header` will create a JuceHeader.h for a given target, which will be generated
 # into your build tree. This should be included with `#include <JuceHeader.h>`. The include path for
@@ -134,6 +139,7 @@ target_link_libraries(plugin
         # AudioPluginData           # If we'd created a binary data target, we'd link to it here
         juce::juce_audio_utils
         juce::juce_dsp
+        PluginAssets
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
