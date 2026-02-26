@@ -28,71 +28,10 @@ float PhaseVocoderPitchShifter::processSample (float input)
 {
     if (!prepared || pitchRatio <= 0.0f)
         return 0.0f;
-
+ 
     if (stft(input))
     {
-        const unsigned int N = stft.numBins();
-
-        // Copy bins and clear output bins
-        for (unsigned int k = 0; k < N; ++k)
-        {
-            binData[k] = stft.bin(k);
-            stft.bin(k) = gam::Complex<float>(0, 0);
-        }
-
-        for (unsigned int k = 1; k < N - 1; ++k)
-        {
-            float src = k / pitchRatio;
-
-            if (src < 0.0f || src >= N - 1)
-                continue;
-
-            gam::Complex<float> c = binData.lookup(src);
-
-            // Magnitude = intensity, complex portion = phase
-            float mag = c.mag() * (pitchRatio > 1 ? std::sqrt(pitchRatio) : 1.0f / std::sqrt(pitchRatio));
-
-            float phase = c.arg();
-            size_t srcIndex = (size_t)src;
-
-            float delta = phase - prevPhase[srcIndex];
-            prevPhase[srcIndex] = phase;
-
-            // Expected phase advance based on SOURCE bin
-            float expectedSrc = srcIndex * expectedPhaseAdvance;
-            delta -= expectedSrc;
-
-            while (delta >  M_PI) delta -= 2.0f * M_PI;
-            while (delta < -M_PI) delta += 2.0f * M_PI;
-
-            // Instantaneous frequency at SOURCE
-            float trueFreq = expectedSrc + delta;
-
-            // Now scale frequency to DESTINATION bin
-            float scaledFreq = trueFreq * pitchRatio;
-
-            // Accumulate at destination bin
-            sumPhase[k] += scaledFreq;
-
-            // For shepard tones: Scale frequency.
-            // A falloff of 0 means falloff just isn't used.
-            if(makeItShepard && falloff > 0.001) {
-                float nyquist = sampleRate / 2.0f;
-                float hertz = float(k) / stft.numBins() * nyquist;
-                float logDistance = std::log2(hertz / centerFrequency);
-                
-                float weight = std::exp(-(logDistance * logDistance) /
-                                        (2.0f * falloff * falloff));
-                mag *= weight;
-            }
-
-            stft.bin(k) = gam::Polar<float>(mag, sumPhase[k]);
-        }
-
-        // Zero DC and Nyquist (stability)
-        stft.bin(0) = gam::Complex<float>(0, 0);
-        if (N > 1)
-            stft.bin(N - 1) = gam::Complex<float>(0, 0);
+        doShift();
     }
 
     float output = stft();
@@ -103,3 +42,72 @@ float PhaseVocoderPitchShifter::processSample (float input)
 
     return output;
 }
+
+void PhaseVocoderPitchShifter::doShift()
+{
+    const unsigned int N = stft.numBins();
+
+    // Copy bins and clear output bins
+    for (unsigned int k = 0; k < N; ++k)
+    {
+        binData[k] = stft.bin(k);
+        stft.bin(k) = gam::Complex<float>(0, 0);
+    }
+
+    for (unsigned int k = 1; k < N - 1; ++k)
+    {
+        float src = k / pitchRatio;
+
+        if (src < 0.0f || src >= N - 1)
+            continue;
+
+        gam::Complex<float> c = binData.lookup(src);
+
+        // Magnitude = intensity, complex portion = phase
+        float mag = c.mag() * (pitchRatio > 1 ? std::sqrt(pitchRatio) : 1.0f / std::sqrt(pitchRatio));
+
+        float phase = c.arg();
+
+        float delta = phase - prevPhase.lookup(src);
+        prevPhase[src] = phase;
+
+        // Expected phase advance based on SOURCE bin
+        float expectedSrc = src * expectedPhaseAdvance;
+        delta -= expectedSrc;
+
+        while (delta >  M_PI) delta -= 2.0f * M_PI;
+        while (delta < -M_PI) delta += 2.0f * M_PI;
+
+        // Instantaneous frequency at SOURCE
+        float trueFreq = expectedSrc + delta;
+
+        float expectedDest = k * expectedPhaseAdvance;  
+        float scaledFreq = trueFreq * pitchRatio;
+
+        // Phase deviation from destination expected frequency
+        float deltaDest = scaledFreq - expectedDest;
+
+        sumPhase[k] += expectedDest + deltaDest;     
+
+        // For shepard tones: Scale frequency.
+        // A falloff of 0 means falloff just isn't used.
+        if(makeItShepard && falloff > 0.001f) {
+            float nyquist = sampleRate / 2.0f;
+            float hertz = float(k) / stft.numBins() * nyquist;
+            float logDistance = std::log2(hertz / centerFrequency);
+            
+            float weight = std::exp(-(logDistance * logDistance) /
+                                    (2.0f * falloff * falloff));
+            mag *= weight;
+        }
+
+        stft.bin(k) = gam::Polar<float>(mag, sumPhase[k]);
+    }
+
+    // Zero DC and Nyquist (stability)
+    stft.bin(0) = gam::Complex<float>(0, 0);
+    if (N > 1)
+        stft.bin(N - 1) = gam::Complex<float>(0, 0);
+}
+
+    

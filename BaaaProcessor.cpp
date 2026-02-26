@@ -150,7 +150,6 @@ void BaaaPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     gam::sampleRate(sampleRate);
     
     shepard = std::make_unique<Shepard>(Shepard(numChannels, 10, (float)(sampleRate)));
-
 }
 
 void BaaaPluginAudioProcessor::releaseResources()

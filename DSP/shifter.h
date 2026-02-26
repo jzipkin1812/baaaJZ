@@ -28,6 +28,7 @@ public:
             falloff(0.0),
             stft(fSize, hSize, 0, gam::HANN, gam::COMPLEX)
     {
+        stft.domain(gam::Domain::master());
     }
 
     PhaseVocoderPitchShifter(float pRatio,
@@ -45,6 +46,7 @@ public:
             falloff(falloffAmount),
             stft(fSize, hSize, 0, gam::HANN, gam::COMPLEX)
     {
+        stft.domain(gam::Domain::master());
     }
 
 private:
@@ -64,12 +66,12 @@ private:
     gam::STFT stft;
     // Supplemental state info for STFT
     LerpArray<gam::STFT::bin_type> binData;
-    std::vector<float> prevPhase;
-    std::vector<float> sumPhase;
+    LerpArray<float> prevPhase;
+    LerpArray<float> sumPhase;
     float expectedPhaseAdvance = 0.0f;
     bool prepared = false;
 
-
+    void doShift();
 
     PhaseVocoderPitchShifter(const PhaseVocoderPitchShifter&) = delete;
     PhaseVocoderPitchShifter& operator=(const PhaseVocoderPitchShifter&) = delete;
