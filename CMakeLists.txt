@@ -65,6 +65,7 @@ juce_add_plugin(plugin
 juce_add_binary_data(PluginAssets
     SOURCES
         Assets/background.png
+        Assets/sheep.png
 )
 
 # `juce_generate_juce_header` will create a JuceHeader.h for a given target, which will be generated

@@ -8,6 +8,7 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
     juce::Colour outlineColour = juce::Colours::lightcyan;
     juce::Colour innerColour = juce::Colours::darkgreen;
     juce::PathStrokeType stroke = juce::PathStrokeType(3.0f);
+    juce::Image sheepImage = juce::ImageCache::getFromMemory(BinaryData::sheep_png, BinaryData::sheep_pngSize);
 
     void drawLabel (juce::Graphics& g, juce::Label& label) override
     {
@@ -38,7 +39,7 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
     void drawButtonBackground(juce::Graphics& g, juce::Button& button,const juce::Colour& backgroundColour,
                               bool isMouseOverButton, bool isButtonDown) override
     {
-        auto bounds = button.getLocalBounds().toFloat().reduced(10.0f).withTrimmedLeft(20.0f).withTrimmedRight(20.0f);
+        auto bounds = button.getLocalBounds().toFloat().reduced(10.0f).withTrimmedLeft(40.0f).withTrimmedRight(40.0f);
 
         float cornerSize = 4.0f;
 
@@ -61,15 +62,42 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
                           juce::Slider& slider) override
     {
         auto bounds = juce::Rectangle<float>(x, y, width, height).reduced(25.0f);
-
         auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
         auto centre = bounds.getCentre();
         auto angle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
 
-        // =====================
-        // 2. Indicator Arc
-        // =====================
+        // ==========================================
+        // Sheep Image (rotates with knob)
+        // ==========================================
 
+        if (!sheepImage.isNull())
+        {
+            // Scale image relative to knob size
+            // Adjust multiplier to taste (0.6–0.8 works well)
+            float imageSize = radius * 1.4f;   // diameter-ish scale
+
+            float imgW = imageSize;
+            float imgH = imageSize;
+
+            // Top-left so image is centered
+            float imgX = centre.x - imgW * 0.5f;
+            float imgY = centre.y - imgH * 0.5f;
+
+            // Create transform:
+            juce::AffineTransform transform;
+
+            transform = transform
+                .translated(-sheepImage.getWidth() * 0.5f,
+                            -sheepImage.getHeight() * 0.5f) // move image center to origin
+                .scaled(imgW / sheepImage.getWidth(),
+                        imgH / sheepImage.getHeight())     // scale to component size
+                .rotated(angle)                            // rotate around origin
+                .translated(centre.x, centre.y);           // move to knob center
+
+            g.drawImageTransformed(sheepImage, transform);
+        }
+
+        // Indicator Arc
         juce::Path valueArc;
         valueArc.addCentredArc(centre.x, centre.y,
                             radius, radius,
@@ -81,10 +109,7 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
         g.setColour(juce::Colour::fromRGB(200, 255, 100)); // your active arc color
         g.strokePath(valueArc, stroke);
 
-        // =====================
-        // 3. Indicator Dot
-        // =====================
-
+        // Indicator Dot
         auto dotRadius = 8.0f;
         auto dotPoint = centre.getPointOnCircumference(radius, angle);
 
@@ -94,22 +119,19 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
                     dotRadius * 2.0f,
                     dotRadius * 2.0f);
 
-        // =====================
-        // 4. Value Text (CENTERED)
-        // =====================
+        // 4. Value Text
         juce::String valueText = slider.getTextFromValue(slider.getValue());
-
-        juce::Font font(30.0f, juce::Font::bold);
+        juce::Font font(juce::FontOptions("Comic Sans MS", 30.0f, juce::Font::plain));
 
         // Create glyph layout
         juce::GlyphArrangement glyphs;
         glyphs.addFittedText(font,
                             valueText,
                             bounds.getX(),
-                            bounds.getY(),
+                            bounds.getY() - 20,
                             bounds.getWidth(),
                             bounds.getHeight(),
-                            juce::Justification::centred,
+                            juce::Justification::centredTop,
                             1);
 
         // Convert to path
@@ -134,7 +156,7 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
 
         juce::String text = button.getButtonText(); // "+" or "-"
 
-        juce::Font font(20.0f, juce::Font::bold);
+        juce::Font font(juce::FontOptions("Comic Sans MS", 20.0f, juce::Font::plain));
 
         juce::GlyphArrangement glyphs;
         glyphs.addFittedText(font,
@@ -157,6 +179,51 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
         g.setColour(juce::Colours::lemonchiffon);
         g.fillPath(textPath);
     }
+};
+
+
+class SliderValueOverlay : public juce::Component
+{
+public:
+    SliderValueOverlay(juce::Slider& s) : slider(s)
+    {
+        slider.onValueChange = [this] { repaint(); };
+        setInterceptsMouseClicks(false, false);
+    }
+
+    void paint(juce::Graphics& g) override
+    {
+        auto bounds = getLocalBounds().toFloat();
+
+        juce::String text =
+            slider.getTextFromValue(slider.getValue());
+
+        juce::Font font(juce::FontOptions("Comic Sans MS", 40.0f, juce::Font::plain));
+
+        juce::GlyphArrangement glyphs;
+        glyphs.addFittedText(font,
+                             text,
+                             bounds.getX(),
+                             bounds.getY(),
+                             bounds.getWidth(),
+                             bounds.getHeight(),
+                             juce::Justification::centred,
+                             1);
+
+        juce::Path path;
+        glyphs.createPath(path);
+
+        // Outline
+        g.setColour(juce::Colours::saddlebrown);
+        g.strokePath(path, juce::PathStrokeType(3.0f));
+
+        // Fill
+        g.setColour(juce::Colours::lemonchiffon);
+        g.fillPath(path);
+    }
+
+private:
+    juce::Slider& slider;
 };
 
 //==============================================================================
@@ -193,7 +260,11 @@ public:
     juce::Label falloffLabel;
 
     juce::Image backgroundImage;
+    juce::Image sheepImage;
     BaaaLookAndFeel customLook;
+
+    std::unique_ptr<SliderValueOverlay> upOverlay;
+    std::unique_ptr<SliderValueOverlay> downOverlay;
 
 private:
     // This reference is provided as a quick way for your editor to
@@ -211,8 +282,8 @@ private:
     const float textSizeLarge = 30.0f;
     const float textSizeSmall = 20.0f;
     
-    const juce::Font fontLarge = juce::Font(juce::FontOptions("Comic Sans MS", 30.0f, juce::Font::plain));
-    const juce::Font fontSmall = juce::Font(juce::FontOptions("Comic Sans MS", 20.0f, juce::Font::plain));
+    const juce::Font fontLarge = juce::Font(juce::FontOptions("Comic Sans MS", 35.0f, juce::Font::plain));
+    const juce::Font fontSmall = juce::Font(juce::FontOptions("Comic Sans MS", 25.0f, juce::Font::plain));
 
 };
 

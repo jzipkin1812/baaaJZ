@@ -7,7 +7,7 @@
 void BaaaPluginAudioProcessorEditor::stylizeSlider(juce::Label &l, juce::Slider &s, juce::String str) {
     // Stylize the slider
     s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    s.setTextBoxStyle(juce::Slider::NoTextBox, false, 100, 20);
+    s.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
     s.setColour(juce::Slider::textBoxTextColourId, juce::Colours::darkslategrey);
 
     // Stylize the label
@@ -22,8 +22,8 @@ void BaaaPluginAudioProcessorEditor::stylizeSlider(juce::Label &l, juce::Slider 
 void BaaaPluginAudioProcessorEditor::stylizeStepper(juce::Label &l, juce::Slider &s, juce::String str) 
 {
     s.setSliderStyle(juce::Slider::IncDecButtons);
-    s.setRange(0, 10, 1);
-    s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 50);
+    s.setRange(0, 5, 1);
+    s.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
 
     l.setText(str, juce::dontSendNotification);
     l.setFont(fontSmall);
@@ -73,10 +73,15 @@ BaaaPluginAudioProcessorEditor::BaaaPluginAudioProcessorEditor (BaaaPluginAudioP
     falloffAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         p.apvts, "falloff", falloffSlider);
 
+    upOverlay = std::make_unique<SliderValueOverlay>(upDupeSlider);
+    addAndMakeVisible(upOverlay.get());
+    downOverlay = std::make_unique<SliderValueOverlay>(downDupeSlider);
+    addAndMakeVisible(downOverlay.get());
+
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setResizable(true, false);
-    setResizeLimits(500, 400, 2000, 1000);
+    setResizeLimits(700, 400, 2000, 1000);
     setSize (1000, 500);
 }
 
@@ -121,7 +126,7 @@ void BaaaPluginAudioProcessorEditor::resized()
     int half = area.getHeight() / 2;
 
     auto knobRow = area.removeFromTop(half + 50);
-    auto bottomRow = area.removeFromTop(half - 100);
+    auto bottomRow = area.removeFromTop(100);
 
     int knobWidth = knobRow.getWidth() / 4;
 
@@ -133,4 +138,7 @@ void BaaaPluginAudioProcessorEditor::resized()
     int stepWidth = bottomRow.getWidth() / 2;
     upDupeSlider.setBounds(bottomRow.removeFromLeft(stepWidth));
     downDupeSlider.setBounds(bottomRow);
+
+    upOverlay->setBounds(upDupeSlider.getBounds());
+    downOverlay->setBounds(downDupeSlider.getBounds());
 }
