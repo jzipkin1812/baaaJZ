@@ -106,8 +106,8 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
                             rotaryEndAngle,
                             true);
 
-        g.setColour(juce::Colour::fromRGB(200, 255, 100)); // your active arc color
-        g.strokePath(valueArc, stroke);
+        g.setColour(juce::Colour::fromRGB(200, 255, 100));
+        g.strokePath(valueArc, juce::PathStrokeType(5.0));
 
         // Indicator Dot
         auto dotRadius = 8.0f;
