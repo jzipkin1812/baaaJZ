@@ -39,6 +39,7 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
     void drawButtonBackground(juce::Graphics& g, juce::Button& button,const juce::Colour& backgroundColour,
                               bool isMouseOverButton, bool isButtonDown) override
     {
+        juce::ignoreUnused(backgroundColour);
         auto bounds = button.getLocalBounds().toFloat().reduced(10.0f).withTrimmedLeft(40.0f).withTrimmedRight(40.0f);
 
         float cornerSize = 4.0f;
@@ -78,10 +79,6 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
 
             float imgW = imageSize;
             float imgH = imageSize;
-
-            // Top-left so image is centered
-            float imgX = centre.x - imgW * 0.5f;
-            float imgY = centre.y - imgH * 0.5f;
 
             // Create transform:
             juce::AffineTransform transform;

@@ -38,7 +38,7 @@ Shepard::Shepard(unsigned int channels, unsigned int shiftPerChannel, float sr) 
 std::unique_ptr<PhaseVocoderPitchShifter>& Shepard::getShifter(unsigned int channel, int pos) {
     // If there are max s superpositions per channel (s will be even):
     // pos is in the range [-s/2, s/2] but cannot be 0
-    unsigned int index = (channel * shiftersPerChannel) + pos + (shiftersPerChannel / 2);
+    unsigned int index = (channel * shiftersPerChannel) + (unsigned int)(pos + int(shiftersPerChannel / 2));
     if(pos > 0) index -= 1;
     return(shifters[index]);
 }
