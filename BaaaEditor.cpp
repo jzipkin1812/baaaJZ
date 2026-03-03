@@ -45,7 +45,7 @@ BaaaPluginAudioProcessorEditor::BaaaPluginAudioProcessorEditor (BaaaPluginAudioP
     stylizeStepper(upDupeLabel, upDupeSlider, "Superpositions Up");
     stylizeStepper(downDupeLabel, downDupeSlider, "Superpositions Down");    
     stylizeSlider(centerLabel, centerSlider, "Center Frequency (Hz)");
-    stylizeSlider(falloffLabel, falloffSlider, "Falloff (Db/Hz)");
+    stylizeSlider(falloffLabel, falloffSlider, "Bandpass Filter Width");
 
     addAndMakeVisible(shiftSlider);
     addAndMakeVisible(gainSlider);

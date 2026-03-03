@@ -1,10 +1,10 @@
-
 #include "shifter.h"
 #include "math.h"
 #include "Gamma/Analysis.h"
 #include "Gamma/DFT.h"
 #include "Gamma/SamplePlayer.h"
 #include <iostream>
+
 using namespace std;
 
 void PhaseVocoderPitchShifter::prepare (float sr)
@@ -18,7 +18,7 @@ void PhaseVocoderPitchShifter::prepare (float sr)
 
     prevPhase.assign(N, 0.0f);
     sumPhase.assign(N, 0.0f);
-    
+
     expectedPhaseAdvance = 2.0f * float(M_PI) * hopSize / fftSize;
 
     prepared = true;
@@ -36,7 +36,6 @@ float PhaseVocoderPitchShifter::processSample (float input)
 
     float output = stft();
 
-    // NaN safety
     if (!std::isfinite(output))
         output = 0.0f;
 
@@ -63,51 +62,56 @@ void PhaseVocoderPitchShifter::doShift()
 
         gam::Complex<float> c = binData.lookup(src);
 
-        // Magnitude = intensity, complex portion = phase
-        float mag = c.mag() * (pitchRatio > 1 ? std::sqrt(pitchRatio) : 1.0f / std::sqrt(pitchRatio));
+        float mag = c.mag() *
+            (pitchRatio > 1 ? std::sqrt(pitchRatio)
+                            : 1.0f / std::sqrt(pitchRatio));
 
         float phase = c.arg();
 
         float delta = phase - prevPhase.lookup(src);
         prevPhase[src] = phase;
 
-        // Expected phase advance based on SOURCE bin
         float expectedSrc = src * expectedPhaseAdvance;
         delta -= expectedSrc;
 
         while (delta >  M_PI) delta -= 2.0f * M_PI;
         while (delta < -M_PI) delta += 2.0f * M_PI;
 
-        // Instantaneous frequency at SOURCE
         float trueFreq = expectedSrc + delta;
 
-        float expectedDest = k * expectedPhaseAdvance;  
+        float expectedDest = k * expectedPhaseAdvance;
         float scaledFreq = trueFreq * pitchRatio;
 
-        // Phase deviation from destination expected frequency
         float deltaDest = scaledFreq - expectedDest;
 
-        sumPhase[k] += expectedDest + deltaDest;     
+        sumPhase[k] += expectedDest + deltaDest;
 
-        // For shepard tones: Scale frequency.
-        // A falloff of 0 means falloff just isn't used.
-        if(makeItShepard && falloff > 0.001f) {
-            float nyquist = sampleRate / 2.0f;
-            float hertz = float(k) / stft.numBins() * nyquist;
-            float logDistance = std::log2(hertz / centerFrequency);
-            
-            float weight = std::exp(-(logDistance * logDistance) /
-                                    (2.0f * falloff * falloff));
-            mag *= weight;
+        // Bandpass filter
+        if (makeItShepard && falloff < 2.99f)
+        {
+            float nyquist = sampleRate * 0.5f;
+
+            float binFreq = (float(k) / float(N)) * nyquist;
+
+            if (binFreq > 1.0f && centerFrequency > 1.0f)
+            {
+                float logDistance = std::log2(binFreq / centerFrequency);
+
+                float weight = std::exp(
+                    -(logDistance * logDistance) /
+                    (2.0f * falloff * falloff)
+                );
+
+                mag *= weight;
+            }
         }
 
         stft.bin(k) = gam::Polar<float>(mag, sumPhase[k]);
     }
+
 
     // Zero DC and Nyquist (stability)
     stft.bin(0) = gam::Complex<float>(0, 0);
     if (N > 1)
         stft.bin(N - 1) = gam::Complex<float>(0, 0);
 }
-
-    

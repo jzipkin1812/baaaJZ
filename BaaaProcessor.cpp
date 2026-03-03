@@ -24,7 +24,7 @@ BaaaPluginAudioProcessor::createParameterLayout()
         "outputGain",
         "Output Gain",
         juce::NormalisableRange<float>(-40.0f, 6.0f, 0.01f),
-        -20.0f
+        0.0f
     ));
 
     // Superpositions
@@ -49,9 +49,9 @@ BaaaPluginAudioProcessor::createParameterLayout()
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         "falloff",
-        "Falloff Rate",
-        juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f),
-        0.6f
+        "Bandpass Filter Width",
+        juce::NormalisableRange<float>(0.0f, 3.0f, 0.01f),
+        1.0f
     ));
 
     return { params.begin(), params.end() };

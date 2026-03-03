@@ -62,6 +62,7 @@ private:
     bool makeItShepard;
     float centerFrequency;
     float falloff;
+    float frameGain;
 
     gam::STFT stft;
     // Supplemental state info for STFT

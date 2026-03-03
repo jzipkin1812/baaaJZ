@@ -2,6 +2,19 @@
 
 #include "BaaaProcessor.h"
 
+static void outlinedText(juce::Graphics& g, juce::GlyphArrangement glyphs, juce::Colour outline, juce::Colour inner, juce::PathStrokeType stroke) {
+    juce::Path textPath;
+    glyphs.createPath(textPath);
+
+    // Draw outline
+    g.setColour(outline);
+    g.strokePath(textPath, stroke);
+
+    // Fill inner
+    g.setColour(inner);
+    g.fillPath(textPath);
+}
+
 class BaaaLookAndFeel : public juce::LookAndFeel_V4
 {
     public:
@@ -24,16 +37,7 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
                              label.getJustificationType(),
                              1);
 
-        juce::Path textPath;
-        glyphs.createPath(textPath);
-
-        // Draw outline
-        g.setColour(outlineColour);
-        g.strokePath(textPath, stroke);
-
-        // Fill inner
-        g.setColour(innerColour);
-        g.fillPath(textPath);
+        outlinedText(g, glyphs, outlineColour, innerColour, stroke);
     }
 
     void drawButtonBackground(juce::Graphics& g, juce::Button& button,const juce::Colour& backgroundColour,
@@ -131,17 +135,7 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
                             juce::Justification::centredTop,
                             1);
 
-        // Convert to path
-        juce::Path textPath;
-        glyphs.createPath(textPath);
-
-        // Draw outline first
-        g.setColour(outlineColour);
-        g.strokePath(textPath, stroke);
-
-        // Fill inner
-        g.setColour(innerColour);
-        g.fillPath(textPath);    
+        outlinedText(g, glyphs, outlineColour, innerColour, stroke);
     }
 
     void drawButtonText (juce::Graphics& g,
@@ -165,16 +159,7 @@ class BaaaLookAndFeel : public juce::LookAndFeel_V4
                             juce::Justification::centred,
                             1);
 
-        juce::Path textPath;
-        glyphs.createPath(textPath);
-
-        // Outline
-        g.setColour(juce::Colours::saddlebrown);
-        g.strokePath(textPath, stroke);
-
-        // Fill
-        g.setColour(juce::Colours::lemonchiffon);
-        g.fillPath(textPath);
+        outlinedText(g, glyphs, juce::Colours::saddlebrown, juce::Colours::lemonchiffon, stroke);
     }
 };
 
@@ -206,17 +191,7 @@ public:
                              bounds.getHeight(),
                              juce::Justification::centred,
                              1);
-
-        juce::Path path;
-        glyphs.createPath(path);
-
-        // Outline
-        g.setColour(juce::Colours::saddlebrown);
-        g.strokePath(path, juce::PathStrokeType(3.0f));
-
-        // Fill
-        g.setColour(juce::Colours::lemonchiffon);
-        g.fillPath(path);
+        outlinedText(g, glyphs, juce::Colours::saddlebrown, juce::Colours::lemonchiffon, juce::PathStrokeType(3.0f));
     }
 
 private:
