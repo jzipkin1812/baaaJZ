@@ -104,8 +104,8 @@ void BaaaPluginAudioProcessorEditor::paint (juce::Graphics& g)
 
     juce::GlyphArrangement glyphs;
     glyphs.addFittedText(fontLarge, "Welcome to Baaaaaaaa",
-                        0, getHeight()-40,
-                        getWidth(), 40,
+                        0, (float)(getHeight()-40),
+                        float(getWidth()), 40.0f,
                         juce::Justification::centred,
                         1);
 
