@@ -91,7 +91,7 @@ float Shepard::processSample(float input, unsigned int channel)
         
         sh->setCenterFrequency(centerFrequency);
         sh->setFalloff(falloff);
-        output += sh->processSample(input);
+        output += sh->processSample(input) * 0.85;
         ++activeVoices;
     }
 

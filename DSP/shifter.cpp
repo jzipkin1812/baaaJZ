@@ -42,6 +42,13 @@ float PhaseVocoderPitchShifter::processSample (float input)
     return output;
 }
 
+// This code was started with the following chat GPT prompt and then heavily revised:
+// This simple C++ pitch shifter is functional but has a low-quality output sound. Improve its design with minimal changes. 
+// Do not change the public API but you may want to add private variables. Make sure: 
+// - The output sound's gain/volume is not generally adjusted very much 
+// - Sanity checks are added to the code to make sure nothing goes horribly wrong 
+// - Still use Gamma's STFT; don't insert other random dependencies
+
 void PhaseVocoderPitchShifter::doShift()
 {
     const unsigned int N = stft.numBins();

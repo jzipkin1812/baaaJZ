@@ -15,6 +15,17 @@ static void outlinedText(juce::Graphics& g, juce::GlyphArrangement glyphs, juce:
     g.fillPath(textPath);
 }
 
+// The following class was written primarily using Chat GPT 5.
+
+// Prompt for outlined text:
+// - Can we make all the text in the editor high-contrast by giving it two different colors - an inner color (dark) and a border color (light)? Then it can be easily seen always.
+// - For the incrementer buttons, can I have them be smaller, and can I also leave room to replace the buttons with my own custom images?
+
+// Prompt for sheep code:
+// Assume you have access to a juce::Image called sheepImage. Adjust the rotary slider so that, in the direct center of the slider component, we draw the sheep image, but rotate it according to the rotary slider's angle, so the sheep rotates as the user shifts the parameter. Make sure to scale the image appropriately based on the size of the component, which changes as the window is resized. The image itself is square.
+
+// Prompt for special slider overlay class:
+// How can we update this to draw the text of the value of the button parameter centered (will show up between the two + and - buttons)? Or should it be a different function
 class BaaaLookAndFeel : public juce::LookAndFeel_V4
 {
     public:
